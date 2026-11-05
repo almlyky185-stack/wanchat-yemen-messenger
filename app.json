@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Wanchat Yemen",
@@ -63,7 +64,9 @@
       "router": {
         "origin": false
       },
-      "eas": {}
+      "eas": {
+        "projectId": "9e649514-faee-463b-a241-c7695a878a28"
+      }
     }
   }
 }
