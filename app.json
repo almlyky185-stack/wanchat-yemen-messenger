@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Wanchaty",
-    "slug": "wanchatyemen2027",
+    "slug": "Wanchaty",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -14,7 +14,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "3736a82d-eb3f-45ff-bc4a-779a7ee8cb1e"
+        "projectId": "9e649514-faee-463b-a241-c7695a878a28"
       }
     }
   }
