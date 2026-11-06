@@ -1,69 +1,33 @@
 {
   "expo": {
-    "name": "Wanchat Yemen",
-    "slug": "wanchat-yemen-app-lxa18bv1",
+    "name": "Wanchaty",
+    "slug": "Wanchaty",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon-native.png",
-    "scheme": "new.blink.wanchat-yemen-app-lxa18bv1",
-    "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.wanchatyemen.messenger"
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon-native.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "package": "com.wanchatyemen.messenger"
+      }
     },
     "web": {
-      "bundler": "metro",
-      "output": "single",
-      "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      [
-        "expo-router",
-        {
-          "asyncRoutes": {
-            "web": false
-          }
-        }
-      ],
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/icon-native.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
-        }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "enableMinifyInReleaseBuilds": false
-          }
-        }
-      ],
-      "expo-font",
-      "expo-web-browser",
-      "expo-asset"
-    ],
-    "experiments": {
-      "typedRoutes": true
+      "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "router": {
-        "origin": false
-      },
-      "eas": {}
+      "eas": {
+        "projectId": "3736a82d-eb3f-45ff-bc4a-779a7ee8cb1e"
+      }
     }
   }
 }
