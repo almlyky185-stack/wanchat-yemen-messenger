@@ -23,7 +23,9 @@ class NativeRenderBoundary extends Component<BoundaryProps, BoundaryState> {
     return { error: String(error) };
   }
 
-  componentDidCatch(_error: Error, _info: ErrorInfo) {}
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Wanchat native render failure:', error, info.componentStack);
+  }
 
   render() {
     if (this.state.error) {
@@ -82,15 +84,15 @@ export default function NativeStartup() {
     const Home = app.Home;
     const { BlinkProvider, Theme, BlinkToastProvider } = app.ui;
     return (
-      <BlinkProvider config={app.config} defaultTheme="dark">
-        <Theme name="dark">
-          <BlinkToastProvider>
-            <NativeRenderBoundary key={retryKey} onRetry={() => setRetryKey((value) => value + 1)}>
+      <NativeRenderBoundary key={retryKey} onRetry={() => setRetryKey((value) => value + 1)}>
+        <BlinkProvider config={app.config} defaultTheme="dark">
+          <Theme name="dark">
+            <BlinkToastProvider>
               <Home />
-            </NativeRenderBoundary>
-          </BlinkToastProvider>
-        </Theme>
-      </BlinkProvider>
+            </BlinkToastProvider>
+          </Theme>
+        </BlinkProvider>
+      </NativeRenderBoundary>
     );
   }
 
