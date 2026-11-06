@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@supabase/supabase-js';
 import {
-  Button, Checkbox, H1, Input, MessageCircle, Paragraph, ScrollView,
+  Button, Checkbox, H1, Input, Mail, MessageCircle, Paragraph, Phone, ScrollView,
   LogOut, Send, Shield, SizableText, Spinner, XStack, YStack,
 } from '@blinkdotnew/mobile-ui';
 import { getAuthRedirectUrl, supabase, type WanchatMessage, type WanchatProfile } from '@/lib/supabase';
@@ -29,13 +29,24 @@ const copy = {
   welcome: ['Welcome back', 'مرحباً بعودتك'],
   email: ['Email address', 'البريد الإلكتروني'],
   password: ['Password', 'كلمة المرور'],
+  chooseMethod: ['Choose how to continue', 'اختر طريقة المتابعة'],
+  chooseMethodBody: ['Sign in or create your Wanchat account using your email or phone number.', 'سجّل الدخول أو أنشئ حساب ون شات باستخدام بريدك الإلكتروني أو رقم هاتفك.'],
+  emailOption: ['Continue with email', 'المتابعة بالبريد الإلكتروني'],
+  phoneOption: ['Continue with phone', 'المتابعة برقم الهاتف'],
+  phone: ['Phone number with country code', 'رقم الهاتف مع رمز الدولة'],
+  phoneExample: ['Example: +967 7XX XXX XXX', 'مثال: ‎+967 7XX XXX XXX'],
+  sendCode: ['Send verification code', 'إرسال رمز التحقق'],
+  codeSent: ['A verification code was sent by SMS.', 'تم إرسال رمز التحقق برسالة نصية.'],
+  verificationCode: ['Verification code', 'رمز التحقق'],
+  verifyCode: ['Verify and continue', 'تحقق وتابع'],
+  changeMethod: ['Choose another method', 'اختر طريقة أخرى'],
   displayName: ['Your name', 'اسمك'],
   continue: ['Continue', 'متابعة'],
   switchToLogin: ['Already have an account? Sign in', 'لديك حساب؟ سجّل الدخول'],
   switchToSignup: ['New to Wanchat? Create an account', 'جديد في ون شات؟ أنشئ حساباً'],
   forgot: ['Forgot password?', 'نسيت كلمة المرور؟'],
   privacyTitle: ['Privacy before you join', 'الخصوصية قبل الانضمام'],
-  privacyBody: ['Your account uses your email. Your profile name, photo and bio, status updates, and messages in the public lounge are visible to anyone, including signed-out visitors. Status updates expire after 24 hours. Do not share private or sensitive information. Wanchat does not request contacts or location in this version. We store account, profile, status, message and consent records to provide the service; account deletion is not available yet.', 'يستخدم حسابك بريدك الإلكتروني. اسم ملفك الشخصي وصورتك ونبذتك وحالاتك ورسائلك في الساحة العامة مرئية للجميع، بما في ذلك الزوار غير المسجلين. تنتهي الحالات بعد ٢٤ ساعة. لا تشارك معلومات خاصة أو حساسة. لا يطلب ون شات جهات اتصالك أو موقعك في هذا الإصدار. نحتفظ ببيانات الحساب والملف الشخصي والحالات والرسائل والموافقة لتقديم الخدمة؛ حذف الحساب غير متاح حالياً.'],
+  privacyBody: ['Your account uses the email address or phone number you choose. Your profile name, photo and bio, status updates, and messages in the public lounge are visible to anyone, including signed-out visitors. Status updates expire after 24 hours. Do not share private or sensitive information. Wanchat does not request contacts or location in this version. We store account, profile, status, message and consent records to provide the service; account deletion is not available yet.', 'يستخدم حسابك البريد الإلكتروني أو رقم الهاتف الذي تختاره. اسم ملفك الشخصي وصورتك ونبذتك وحالاتك ورسائلك في الساحة العامة مرئية للجميع، بما في ذلك الزوار غير المسجلين. تنتهي الحالات بعد ٢٤ ساعة. لا تشارك معلومات خاصة أو حساسة. لا يطلب ون شات جهات اتصالك أو موقعك في هذا الإصدار. نحتفظ ببيانات الحساب والملف الشخصي والحالات والرسائل والموافقة لتقديم الخدمة؛ حذف الحساب غير متاح حالياً.'],
   accept: ['I have read and accept the privacy notice', 'قرأت إشعار الخصوصية وأوافق عليه'],
   consentRequired: ['Accept the privacy notice before creating an account.', 'يرجى الموافقة على إشعار الخصوصية قبل إنشاء الحساب.'],
   chats: ['Community', 'المجتمع'],
@@ -73,7 +84,11 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone' | null>(null);
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [phoneCode, setPhoneCode] = useState('');
+  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [accepted, setAccepted] = useState(false);
@@ -196,6 +211,54 @@ export default function Home() {
     } finally { setBusy(false); }
   };
 
+  const sendPhoneCode = async () => {
+    setError(''); setNotice('');
+    const normalizedPhone = phone.trim().replace(/[\s()-]/g, '');
+    if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
+      setError(rtl ? 'أدخل رقم هاتف دولياً صحيحاً، مثل ‎+967 7XX XXX XXX.' : 'Enter a valid international phone number, such as +967 7XX XXX XXX.');
+      return;
+    }
+    if (authMode === 'signup' && !accepted) { setError(t('consentRequired')); return; }
+    setBusy(true);
+    try {
+      const acceptedAt = new Date().toISOString();
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        phone: normalizedPhone,
+        options: {
+          shouldCreateUser: authMode === 'signup',
+          data: authMode === 'signup' ? {
+            display_name: displayName.trim() || normalizedPhone,
+            privacy_policy_version: POLICY_VERSION,
+            privacy_accepted_at: acceptedAt,
+            privacy_language: language,
+          } : undefined,
+        },
+      });
+      if (otpError) throw otpError;
+      setPhone(normalizedPhone);
+      setPhoneCodeSent(true);
+      setNotice(t('codeSent'));
+      pulse();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t('errorFallback'));
+    } finally { setBusy(false); }
+  };
+
+  const verifyPhoneCode = async () => {
+    setError(''); setNotice('');
+    if (!phoneCode.trim()) { setError(t('errorFallback')); return; }
+    setBusy(true);
+    try {
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        phone: phone.trim(), token: phoneCode.trim(), type: 'sms',
+      });
+      if (verifyError) throw verifyError;
+      pulse();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t('errorFallback'));
+    } finally { setBusy(false); }
+  };
+
   const resetPassword = async () => {
     setError(''); setNotice('');
     if (!email.trim()) { setError(t('errorFallback')); return; }
@@ -248,43 +311,70 @@ export default function Home() {
             </YStack>
             <Button chromeless onPress={() => { setLanguage(rtl ? 'en' : 'ar'); pulse(); }} color={palette.mint} minWidth={48} height={48} accessibilityLabel="Change language">{rtl ? 'EN' : 'عربي'}</Button>
           </XStack>
-          <YStack backgroundColor={palette.panel} borderWidth={1} borderColor={palette.border} borderRadius={24} padding="$5" gap="$4">
-            <YStack alignItems={rtl ? 'flex-end' : 'flex-start'} gap="$2">
-              <SizableText color={palette.mint} size="$3" fontWeight="700">{authMode === 'signup' ? t('create') : t('welcome')}</SizableText>
-              <H1 color={palette.white} fontSize={30} lineHeight={36} textAlign={rtl ? 'right' : 'left'}>{t('app')}</H1>
-              <Paragraph color={palette.muted} textAlign={rtl ? 'right' : 'left'}>{t('tagline')}</Paragraph>
+          {authMethod === null ? (
+            <YStack backgroundColor={palette.panel} borderWidth={1} borderColor={palette.border} borderRadius={24} padding="$5" gap="$4">
+              <SizableText color={palette.mint} size="$5" fontWeight="700" textAlign={rtl ? 'right' : 'left'}>{t('chooseMethod')}</SizableText>
+              <Paragraph color={palette.muted} textAlign={rtl ? 'right' : 'left'}>{t('chooseMethodBody')}</Paragraph>
+              <Button onPress={() => { setAuthMethod('phone'); setAuthMode('signup'); pulse(); }} minHeight={56} borderRadius={16} backgroundColor={palette.mint} color={palette.forestDeep} fontWeight="800">
+                <XStack alignItems="center" justifyContent="center" gap="$2"><Phone size={19} color={palette.forestDeep} /><SizableText color={palette.forestDeep} fontWeight="800">{t('phoneOption')}</SizableText></XStack>
+              </Button>
+              <Button onPress={() => { setAuthMethod('email'); setAuthMode('signup'); pulse(); }} minHeight={56} borderRadius={16} backgroundColor={palette.panelLight} color={palette.white} fontWeight="700">
+                <XStack alignItems="center" justifyContent="center" gap="$2"><Mail size={19} color={palette.mint} /><SizableText color={palette.white} fontWeight="700">{t('emailOption')}</SizableText></XStack>
+              </Button>
             </YStack>
-            {authMode === 'signup' && <Input value={displayName} onChangeText={setDisplayName} placeholder={t('displayName')} placeholderTextColor={palette.muted} color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />}
-            <Input value={email} onChangeText={setEmail} placeholder={t('email')} placeholderTextColor={palette.muted} keyboardType="email-address" autoCapitalize="none" autoComplete="email" color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />
-            <Input value={password} onChangeText={setPassword} placeholder={t('password')} placeholderTextColor={palette.muted} secureTextEntry autoCapitalize="none" color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />
-            {authMode === 'signup' ? (
-              <YStack backgroundColor={palette.forestDeep} borderColor={palette.border} borderWidth={1} borderRadius={16} padding="$4" gap="$3">
-                <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'}>
-                  <Shield size={17} color={palette.mint} />
-                  <SizableText color={palette.white} fontWeight="700" size="$4">{t('privacyTitle')}</SizableText>
-                </XStack>
-                <Paragraph color={palette.muted} lineHeight={21} textAlign={rtl ? 'right' : 'left'}>{t('privacyBody')}</Paragraph>
-                <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'} minHeight={48}>
-                  <Checkbox checked={accepted} onCheckedChange={(value) => { setAccepted(value === true); pulse(); }} size="$5" borderColor={accepted ? palette.mint : palette.muted} backgroundColor={accepted ? palette.mint : 'transparent'}>
-                    <Checkbox.Indicator><SizableText color={palette.forestDeep} fontWeight="800">✓</SizableText></Checkbox.Indicator>
-                  </Checkbox>
-                  <Button chromeless flex={1} minHeight={48} justifyContent={rtl ? 'flex-end' : 'flex-start'} onPress={() => { setAccepted(!accepted); pulse(); }}>
-                    <SizableText color={palette.white} flex={1} textAlign={rtl ? 'right' : 'left'}>{t('accept')}</SizableText>
-                  </Button>
-                </XStack>
+          ) : (
+            <YStack backgroundColor={palette.panel} borderWidth={1} borderColor={palette.border} borderRadius={24} padding="$5" gap="$4">
+              <YStack alignItems={rtl ? 'flex-end' : 'flex-start'} gap="$2">
+                <SizableText color={palette.mint} size="$3" fontWeight="700">{authMode === 'signup' ? t('create') : t('welcome')}</SizableText>
+                <H1 color={palette.white} fontSize={30} lineHeight={36} textAlign={rtl ? 'right' : 'left'}>{t('app')}</H1>
+                <Paragraph color={palette.muted} textAlign={rtl ? 'right' : 'left'}>{t('tagline')}</Paragraph>
               </YStack>
-            ) : (
-              <Button chromeless onPress={resetPassword} minHeight={44} alignSelf={rtl ? 'flex-start' : 'flex-end'} color={palette.mint}>{t('forgot')}</Button>
-            )}
-            {!!error && <Paragraph color={palette.danger} role="alert">{error}</Paragraph>}
-            {!!notice && <Paragraph color={palette.mint}>{notice}</Paragraph>}
-            <Button onPress={submitAuth} disabled={busy} minHeight={52} borderRadius={16} backgroundColor={palette.mint} color={palette.forestDeep} fontWeight="800" pressStyle={{ opacity: 0.82, scale: 0.98 }}>
-              {busy ? <Spinner color={palette.forestDeep} /> : t('continue')}
-            </Button>
-            <Button chromeless minHeight={48} onPress={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAccepted(false); setError(''); setNotice(''); pulse(); }} color={palette.white}>
-              {authMode === 'signup' ? t('switchToLogin') : t('switchToSignup')}
-            </Button>
-          </YStack>
+              {authMethod === 'phone' ? (
+                <>
+                  {authMode === 'signup' && <Input value={displayName} onChangeText={setDisplayName} placeholder={t('displayName')} placeholderTextColor={palette.muted} color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />}
+                  <Input value={phone} onChangeText={(value) => { setPhone(value); setPhoneCodeSent(false); }} placeholder={t('phone')} placeholderTextColor={palette.muted} keyboardType="phone-pad" autoComplete="tel" autoCapitalize="none" color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />
+                  <SizableText color={palette.muted} size="$2" textAlign={rtl ? 'right' : 'left'}>{t('phoneExample')}</SizableText>
+                  {authMode === 'signup' && (
+                    <YStack backgroundColor={palette.forestDeep} borderColor={palette.border} borderWidth={1} borderRadius={16} padding="$4" gap="$3">
+                      <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'}><Shield size={17} color={palette.mint} /><SizableText color={palette.white} fontWeight="700" size="$4">{t('privacyTitle')}</SizableText></XStack>
+                      <Paragraph color={palette.muted} lineHeight={21} textAlign={rtl ? 'right' : 'left'}>{t('privacyBody')}</Paragraph>
+                      <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'} minHeight={48}>
+                        <Checkbox checked={accepted} onCheckedChange={(value) => { setAccepted(value === true); pulse(); }} size="$5" borderColor={accepted ? palette.mint : palette.muted} backgroundColor={accepted ? palette.mint : 'transparent'}><Checkbox.Indicator><SizableText color={palette.forestDeep} fontWeight="800">✓</SizableText></Checkbox.Indicator></Checkbox>
+                        <Button chromeless flex={1} minHeight={48} justifyContent={rtl ? 'flex-end' : 'flex-start'} onPress={() => { setAccepted(!accepted); pulse(); }}><SizableText color={palette.white} flex={1} textAlign={rtl ? 'right' : 'left'}>{t('accept')}</SizableText></Button>
+                      </XStack>
+                    </YStack>
+                  )}
+                  {phoneCodeSent && <Input value={phoneCode} onChangeText={setPhoneCode} placeholder={t('verificationCode')} placeholderTextColor={palette.muted} keyboardType="number-pad" autoComplete="one-time-code" maxLength={8} color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />}
+                </>
+              ) : (
+                <>
+                  {authMode === 'signup' && <Input value={displayName} onChangeText={setDisplayName} placeholder={t('displayName')} placeholderTextColor={palette.muted} color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />}
+                  <Input value={email} onChangeText={setEmail} placeholder={t('email')} placeholderTextColor={palette.muted} keyboardType="email-address" autoCapitalize="none" autoComplete="email" color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />
+                  <Input value={password} onChangeText={setPassword} placeholder={t('password')} placeholderTextColor={palette.muted} secureTextEntry autoCapitalize="none" color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />
+                  {authMode === 'signup' ? (
+                    <YStack backgroundColor={palette.forestDeep} borderColor={palette.border} borderWidth={1} borderRadius={16} padding="$4" gap="$3">
+                      <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'}><Shield size={17} color={palette.mint} /><SizableText color={palette.white} fontWeight="700" size="$4">{t('privacyTitle')}</SizableText></XStack>
+                      <Paragraph color={palette.muted} lineHeight={21} textAlign={rtl ? 'right' : 'left'}>{t('privacyBody')}</Paragraph>
+                      <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'} minHeight={48}>
+                        <Checkbox checked={accepted} onCheckedChange={(value) => { setAccepted(value === true); pulse(); }} size="$5" borderColor={accepted ? palette.mint : palette.muted} backgroundColor={accepted ? palette.mint : 'transparent'}><Checkbox.Indicator><SizableText color={palette.forestDeep} fontWeight="800">✓</SizableText></Checkbox.Indicator></Checkbox>
+                        <Button chromeless flex={1} minHeight={48} justifyContent={rtl ? 'flex-end' : 'flex-start'} onPress={() => { setAccepted(!accepted); pulse(); }}><SizableText color={palette.white} flex={1} textAlign={rtl ? 'right' : 'left'}>{t('accept')}</SizableText></Button>
+                      </XStack>
+                    </YStack>
+                  ) : <Button chromeless onPress={resetPassword} minHeight={44} alignSelf={rtl ? 'flex-start' : 'flex-end'} color={palette.mint}>{t('forgot')}</Button>}
+                </>
+              )}
+              {!!error && <Paragraph color={palette.danger} role="alert">{error}</Paragraph>}
+              {!!notice && <Paragraph color={palette.mint}>{notice}</Paragraph>}
+              <Button onPress={authMethod === 'phone' ? (phoneCodeSent ? verifyPhoneCode : sendPhoneCode) : submitAuth} disabled={busy} minHeight={52} borderRadius={16} backgroundColor={palette.mint} color={palette.forestDeep} fontWeight="800" pressStyle={{ opacity: 0.82, scale: 0.98 }}>
+                {busy ? <Spinner color={palette.forestDeep} /> : authMethod === 'phone' ? (phoneCodeSent ? t('verifyCode') : t('sendCode')) : t('continue')}
+              </Button>
+              {authMethod === 'phone' && phoneCodeSent && <Button chromeless onPress={() => void sendPhoneCode()} minHeight={44} color={palette.mint}>{t('sendCode')}</Button>}
+              <Button chromeless minHeight={48} onPress={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAccepted(false); setPhoneCodeSent(false); setPhoneCode(''); setError(''); setNotice(''); pulse(); }} color={palette.white}>
+                {authMode === 'signup' ? t('switchToLogin') : t('switchToSignup')}
+              </Button>
+              <Button chromeless minHeight={44} onPress={() => { setAuthMethod(null); setPhoneCodeSent(false); setPhoneCode(''); setError(''); setNotice(''); }} color={palette.muted}>{t('changeMethod')}</Button>
+            </YStack>
+          )}
           <SizableText color={palette.muted} size="$2" textAlign="center">{POLICY_VERSION}</SizableText>
           <SizableText color={connectionQuery.isError ? palette.danger : palette.mint} size="$2" textAlign="center">
             {connectionQuery.isLoading ? t('cloudChecking') : connectionQuery.isError ? connectionQuery.error.message : t('cloudConnected')}
