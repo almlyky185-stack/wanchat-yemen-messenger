@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@supabase/supabase-js';
 import {
@@ -10,6 +12,8 @@ import {
 import { getAuthRedirectUrl, supabase, type WanchatMessage, type WanchatProfile } from '@/lib/supabase';
 import { Screen } from '@/components/Screen';
 import { ProfileStatusPanel } from '@/components/ProfileStatusPanel';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const ROOM_ID = 'community-lounge';
 const ROOM_CHANNEL = 'wanchat-community-lounge';
@@ -33,6 +37,7 @@ const copy = {
   chooseMethodBody: ['Sign in or create your Wanchat account using your email or phone number.', 'سجّل الدخول أو أنشئ حساب ون شات باستخدام بريدك الإلكتروني أو رقم هاتفك.'],
   emailOption: ['Continue with email', 'المتابعة بالبريد الإلكتروني'],
   phoneOption: ['Continue with phone', 'المتابعة برقم الهاتف'],
+  googleOption: ['Continue with Google', 'المتابعة باستخدام Google'],
   phone: ['Phone number with country code', 'رقم الهاتف مع رمز الدولة'],
   phoneExample: ['Example: +967 7XX XXX XXX', 'مثال: ‎+967 7XX XXX XXX'],
   sendCode: ['Send verification code', 'إرسال رمز التحقق'],
@@ -211,6 +216,33 @@ export default function Home() {
     } finally { setBusy(false); }
   };
 
+  const signInWithGoogle = async () => {
+    setError(''); setNotice(''); setBusy(true);
+    try {
+      const redirectTo = getAuthRedirectUrl();
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+          queryParams: { prompt: 'select_account' },
+        },
+      });
+      if (oauthError) throw oauthError;
+      if (!data.url) throw new Error('Google sign-in could not be started.');
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (result.type !== 'success') return;
+      const callback = Linking.parse(result.url);
+      const code = typeof callback.queryParams?.code === 'string' ? callback.queryParams.code : '';
+      if (!code) throw new Error('Google sign-in did not return an authorization code.');
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) throw exchangeError;
+      pulse();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t('errorFallback'));
+    } finally { setBusy(false); }
+  };
+
   const sendPhoneCode = async () => {
     setError(''); setNotice('');
     const normalizedPhone = phone.trim().replace(/[\s()-]/g, '');
@@ -315,6 +347,9 @@ export default function Home() {
             <YStack backgroundColor={palette.panel} borderWidth={1} borderColor={palette.border} borderRadius={24} padding="$5" gap="$4">
               <SizableText color={palette.mint} size="$5" fontWeight="700" textAlign={rtl ? 'right' : 'left'}>{t('chooseMethod')}</SizableText>
               <Paragraph color={palette.muted} textAlign={rtl ? 'right' : 'left'}>{t('chooseMethodBody')}</Paragraph>
+              <Button onPress={() => void signInWithGoogle()} disabled={busy} minHeight={56} borderRadius={16} backgroundColor={palette.mint} color={palette.forestDeep} fontWeight="800">
+                <XStack alignItems="center" justifyContent="center" gap="$2"><SizableText color={palette.forestDeep} size="$5">G</SizableText><SizableText color={palette.forestDeep} fontWeight="800">{t('googleOption')}</SizableText></XStack>
+              </Button>
               <Button onPress={() => { setAuthMethod('phone'); setAuthMode('signup'); pulse(); }} minHeight={56} borderRadius={16} backgroundColor={palette.mint} color={palette.forestDeep} fontWeight="800">
                 <XStack alignItems="center" justifyContent="center" gap="$2"><SizableText color={palette.forestDeep} size="$5">☎</SizableText><SizableText color={palette.forestDeep} fontWeight="800">{t('phoneOption')}</SizableText></XStack>
               </Button>
