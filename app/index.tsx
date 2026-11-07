@@ -85,7 +85,7 @@ const copy = {
 
 
 const ONBOARDING_KEY = 'wanchat-onboarding-v1';
-const permissionSteps: readonly never[] = [];
+const permissionSteps: readonly { title: string; description: string; permission: string }[] = [];
 
 type Language = 'ar' | 'en' | 'hi' | 'fr' | 'it' | 'zh' | 'ko' | 'fa';
 const languages: {code:Language;label:string}[] = [{code:'ar',label:'العربية'},{code:'en',label:'English'},{code:'hi',label:'हिन्दी'},{code:'fr',label:'Français'},{code:'it',label:'Italiano'},{code:'zh',label:'中文'},{code:'ko',label:'한국어'},{code:'fa',label:'فارسی'}];
