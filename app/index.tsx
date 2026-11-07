@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Platform } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
@@ -82,6 +83,20 @@ const copy = {
   loading: ['Opening your Wanchat…', 'جارٍ فتح ون شات…'],
 } as const;
 
+
+const ONBOARDING_KEY = 'wanchat-onboarding-v1';
+const permissionSteps = [
+  { title: 'جهات الاتصال', description: 'يُستخدم هذا الإذن للعثور على جهات اتصالك. مشاركة الأسماء أو الأرقام مع قاعدة كاشف الأرقام تحتاج موافقة منفصلة وواضحة.', permission: 'android.permission.READ_CONTACTS' },
+  { title: 'الإشعارات', description: 'لإبلاغك بالرسائل والحالات والمكالمات الجديدة.', permission: 'android.permission.POST_NOTIFICATIONS' },
+  { title: 'الكاميرا', description: 'لالتقاط الصور ومقاطع الفيديو داخل التطبيق.', permission: 'android.permission.CAMERA' },
+  { title: 'الميكروفون', description: 'لإرسال الرسائل الصوتية وإجراء المكالمات الصوتية.', permission: 'android.permission.RECORD_AUDIO' },
+  { title: 'الصور', description: 'لاختيار الصور التي تريد إرسالها أو نشرها في الحالات.', permission: 'android.permission.READ_MEDIA_IMAGES' },
+  { title: 'الفيديوهات', description: 'لاختيار مقاطع الفيديو التي تريد مشاركتها.', permission: 'android.permission.READ_MEDIA_VIDEO' },
+  { title: 'الموقع الجغرافي', description: 'لعرض الأشخاص القريبين عند تشغيل الرادار. يمكنك استخدام التطبيق دون تشغيل الرادار.', permission: 'android.permission.ACCESS_FINE_LOCATION' },
+  { title: 'أجهزة Bluetooth القريبة', description: 'لتهيئة اكتشاف الأجهزة القريبة ونقل الرسائل دون إنترنت عند توفر دعم هذه الميزة.', permission: 'android.permission.BLUETOOTH_SCAN' },
+  { title: 'الاتصال بأجهزة Bluetooth', description: 'للاتصال بالأجهزة القريبة عند استخدام ميزات النقل المحلي.', permission: 'android.permission.BLUETOOTH_CONNECT' },
+] as const;
+
 type Language = 'en' | 'ar';
 
 export default function Home() {
@@ -97,6 +112,12 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [accepted, setAccepted] = useState(false);
+  const [onboardingReady, setOnboardingReady] = useState(false);
+  const [onboardingDone, setOnboardingDone] = useState(false);
+  const [permissionIntroAccepted, setPermissionIntroAccepted] = useState(false);
+  const [permissionIndex, setPermissionIndex] = useState(-1);
+  const [policyChecked, setPolicyChecked] = useState(false);
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -179,6 +200,35 @@ export default function Home() {
     });
     return () => { void supabase.removeChannel(channel); };
   }, [user?.id, queryClient]);
+
+
+  const requestNextPermission = async () => {
+    const step = permissionSteps[permissionIndex];
+    if (!step) return;
+    try {
+      if (Platform.OS === 'android') {
+        await PermissionsAndroid.request(step.permission as any, {
+          title: `إذن ${step.title}`,
+          message: step.description,
+          buttonPositive: 'السماح',
+          buttonNegative: 'ليس الآن',
+          buttonNeutral: 'لاحقاً',
+        });
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'تعذر طلب الإذن من النظام.');
+    }
+    if (permissionIndex + 1 >= permissionSteps.length) setPermissionIndex(-2);
+    else setPermissionIndex((value) => value + 1);
+  };
+
+  const finishOnboarding = async () => {
+    if (!policyChecked) { setError('يرجى الموافقة على سياسة الخصوصية للمتابعة.'); return; }
+    await AsyncStorage.setItem(ONBOARDING_KEY, 'accepted');
+    setOnboardingDone(true);
+    setAccepted(true);
+    setError('');
+  };
 
   const pulse = () => {
     if (Platform.OS !== 'web') void Haptics.selectionAsync();
@@ -322,6 +372,58 @@ export default function Home() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : t('errorFallback')); }
     finally { setBusy(false); }
   };
+
+
+  if (!onboardingReady) return (
+    <Screen backgroundColor={palette.forest} alignItems="center" justifyContent="center">
+      <YStack alignItems="center" gap="$3"><Spinner color={palette.mint} /><Paragraph color={palette.white}>جارٍ تجهيز إعدادات التطبيق…</Paragraph></YStack>
+    </Screen>
+  );
+
+  if (!onboardingDone) {
+    const currentPermission = permissionIndex >= 0 ? permissionSteps[permissionIndex] : null;
+    return (
+      <Screen backgroundColor={palette.forest}>
+        <ScrollView flex={1}>
+          <YStack width="100%" maxWidth={480} alignSelf="center" padding="$5" paddingTop="$8" gap="$4">
+            <YStack alignItems="center" gap="$2">
+              <MessageCircle size={42} color={palette.mint} />
+              <H1 color={palette.white} textAlign="center">Wanchat Yemen</H1>
+              <Paragraph color={palette.muted} textAlign="center">إعداد التطبيق لأول مرة</Paragraph>
+            </YStack>
+            {permissionIndex === -1 ? (
+              <YStack backgroundColor={palette.panel} borderColor={palette.border} borderWidth={1} borderRadius={22} padding="$4" gap="$3">
+                <SizableText color={palette.white} fontWeight="800" size="$5">الموافقة على طلب الأذونات</SizableText>
+                <Paragraph color={palette.muted} lineHeight={23}>سيطلب التطبيق الأذونات اللازمة، واحداً تلو الآخر، من نافذة أندرويد الرسمية. اطلع على سبب كل إذن قبل اتخاذ قرارك. يمكنك رفض الإذن غير الضروري، وستتعطل الميزة المرتبطة به فقط.</Paragraph>
+                <Button chromeless minHeight={48} onPress={() => setPermissionIntroAccepted(!permissionIntroAccepted)}>
+                  <SizableText color={palette.white}>{permissionIntroAccepted ? '☑' : '☐'} أوافق على متابعة طلب الأذونات الموضحة</SizableText>
+                </Button>
+                <Button disabled={!permissionIntroAccepted} onPress={() => { setPermissionIndex(0); setError(''); }} minHeight={52} backgroundColor={palette.mint} color={palette.forestDeep} borderRadius={15}>ابدأ طلب الأذونات</Button>
+              </YStack>
+            ) : currentPermission ? (
+              <YStack backgroundColor={palette.panel} borderColor={palette.border} borderWidth={1} borderRadius={22} padding="$4" gap="$3">
+                <SizableText color={palette.mint} fontWeight="700">الإذن {permissionIndex + 1} من {permissionSteps.length}</SizableText>
+                <SizableText color={palette.white} fontWeight="800" size="$6">{currentPermission.title}</SizableText>
+                <Paragraph color={palette.muted} lineHeight={23}>{currentPermission.description}</Paragraph>
+                <Paragraph color={palette.muted} size="$2">ستظهر الآن نافذة أندرويد الرسمية. إذا رفضت الإذن، يمكنك متابعة الإعداد مع تعطيل الميزة المرتبطة به.</Paragraph>
+                {!!error && <Paragraph color={palette.danger}>{error}</Paragraph>}
+                <Button onPress={() => void requestNextPermission()} minHeight={52} backgroundColor={palette.mint} color={palette.forestDeep} borderRadius={15}>طلب الإذن والمتابعة</Button>
+              </YStack>
+            ) : (
+              <YStack backgroundColor={palette.panel} borderColor={palette.border} borderWidth={1} borderRadius={22} padding="$4" gap="$3">
+                <SizableText color={palette.white} fontWeight="800" size="$5">سياسة الخصوصية</SizableText>
+                <Paragraph color={palette.muted} lineHeight={23}>نستخدم الأذونات لتشغيل الميزات التي تختار استخدامها. لا تُرفع جهات اتصالك إلى قاعدة كاشف الأرقام لمجرد منح إذن الوصول؛ مشاركة جهات الاتصال تحتاج موافقة مستقلة وصريحة. يمكنك رفض المشاركة واستخدام بقية التطبيق.</Paragraph>
+                <Button chromeless minHeight={44} onPress={() => setPolicyChecked(!policyChecked)}>
+                  <SizableText color={palette.white}> {policyChecked ? '☑' : '☐'} أوافق على سياسة الخصوصية وشروط الاستخدام</SizableText>
+                </Button>
+                <Button disabled={!policyChecked} onPress={() => void finishOnboarding()} minHeight={52} backgroundColor={palette.mint} color={palette.forestDeep} borderRadius={15}>موافقة ومتابعة</Button>
+              </YStack>
+            )}
+          </YStack>
+        </ScrollView>
+      </Screen>
+    );
+  }
 
   if (authLoading) return (
     <Screen backgroundColor={palette.forest} alignItems="center" justifyContent="center">
