@@ -97,10 +97,19 @@ const permissionSteps = [
   { title: 'الاتصال بأجهزة Bluetooth', description: 'للاتصال بالأجهزة القريبة عند استخدام ميزات النقل المحلي.', permission: 'android.permission.BLUETOOTH_CONNECT' },
 ] as const;
 
-type Language = 'en' | 'ar';
+type Language = 'ar' | 'en' | 'hi' | 'fr' | 'it' | 'zh' | 'ko' | 'fa';
+const languages: {code:Language;label:string}[] = [{code:'ar',label:'العربية'},{code:'en',label:'English'},{code:'hi',label:'हिन्दी'},{code:'fr',label:'Français'},{code:'it',label:'Italiano'},{code:'zh',label:'中文'},{code:'ko',label:'한국어'},{code:'fa',label:'فارسی'}];
+const extraCopy: Partial<Record<Language, Partial<Record<keyof typeof copy,string>>>> = {
+hi:{app:'वॉन्चैट',login:'लॉग इन',signup:'खाता बनाएँ',create:'अपना खाता बनाएँ',welcome:'वापसी पर स्वागत है',email:'ईमेल पता',password:'पासवर्ड',chooseMethod:'जारी रखने का तरीका चुनें',googleOption:'Google से जारी रखें',continue:'जारी रखें',chats:'चैट',privacy:'गोपनीयता',lounge:'सामुदायिक चैट',send:'भेजें',signOut:'लॉग आउट'},
+fr:{login:'Connexion',signup:'Créer un compte',create:'Créez votre compte',welcome:'Bon retour',email:'Adresse e-mail',password:'Mot de passe',chooseMethod:'Choisissez comment continuer',googleOption:'Continuer avec Google',continue:'Continuer',chats:'Discussions',privacy:'Confidentialité',lounge:'Salon communautaire',send:'Envoyer',signOut:'Déconnexion'},
+it:{login:'Accedi',signup:'Crea account',create:'Crea il tuo account',welcome:'Bentornato',email:'Indirizzo email',password:'Password',chooseMethod:'Scegli come continuare',googleOption:'Continua con Google',continue:'Continua',chats:'Chat',privacy:'Privacy',lounge:'Chat della comunità',send:'Invia',signOut:'Esci'},
+zh:{login:'登录',signup:'创建账户',create:'创建您的账户',welcome:'欢迎回来',email:'电子邮箱',password:'密码',chooseMethod:'选择继续方式',googleOption:'使用 Google 继续',continue:'继续',chats:'聊天',privacy:'隐私',lounge:'社区聊天室',send:'发送',signOut:'退出登录'},
+ko:{login:'로그인',signup:'계정 만들기',create:'계정 만들기',welcome:'다시 오신 것을 환영합니다',email:'이메일 주소',password:'비밀번호',chooseMethod:'계속할 방법 선택',googleOption:'Google로 계속',continue:'계속',chats:'채팅',privacy:'개인정보 보호',lounge:'커뮤니티 대화방',send:'보내기',signOut:'로그아웃'},
+fa:{login:'ورود',signup:'ایجاد حساب',create:'حساب خود را بسازید',welcome:'خوش آمدید',email:'نشانی ایمیل',password:'گذرواژه',chooseMethod:'روش ادامه را انتخاب کنید',googleOption:'ادامه با گوگل',continue:'ادامه',chats:'گفتگوها',privacy:'حریم خصوصی',lounge:'گفتگوی انجمن',send:'ارسال',signOut:'خروج'}
+};
 
 export default function Home() {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('ar');
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
@@ -443,8 +452,9 @@ export default function Home() {
               <SizableText color={palette.white} size="$8" fontWeight="800">{t('app')}</SizableText>
               <SizableText color={palette.muted} size="$3">{t('tagline')}</SizableText>
             </YStack>
-            <Button chromeless onPress={() => { setLanguage(rtl ? 'en' : 'ar'); pulse(); }} color={palette.mint} minWidth={48} height={48} accessibilityLabel="Change language">{rtl ? 'EN' : 'عربي'}</Button>
+            <Button chromeless onPress={() => changeLanguage('ar')} color={palette.mint} minWidth={48} height={48}>العربية</Button>
           </XStack>
+          <XStack flexWrap="wrap" justifyContent="center" gap="$2">{languages.map((item) => <Button key={item.code} size="$2" minHeight={34} paddingHorizontal="$2" borderRadius={10} backgroundColor={language === item.code ? palette.mint : palette.panelLight} color={language === item.code ? palette.forestDeep : palette.white} onPress={() => changeLanguage(item.code)}>{item.label}</Button>)}</XStack>
           {authMethod === null ? (
             <YStack backgroundColor={palette.panel} borderWidth={1} borderColor={palette.border} borderRadius={24} padding="$5" gap="$4">
               <SizableText color={palette.mint} size="$5" fontWeight="700" textAlign={rtl ? 'right' : 'left'}>{t('chooseMethod')}</SizableText>
