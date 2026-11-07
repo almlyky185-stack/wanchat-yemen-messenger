@@ -25,6 +25,12 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Expo configuration check
+        run: npx expo-doctor
+
       - name: Link Expo project
         run: npx eas-cli@latest init --force --non-interactive
 
