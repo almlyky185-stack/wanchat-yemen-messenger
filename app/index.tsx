@@ -123,8 +123,8 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'chats' | 'updates' | 'profile' | 'privacy'>('chats');
   const [message, setMessage] = useState('');
   const queryClient = useQueryClient();
-  const rtl = language === 'ar';
-  const t = (key: keyof typeof copy) => copy[key][rtl ? 1 : 0];
+  const rtl = language === 'ar' || language === 'fa';
+  const t = (key: keyof typeof copy) => extraCopy[language]?.[key] ?? copy[key][rtl ? 1 : 0];
   const connectionQuery = useQuery({
     queryKey: ['supabase-connection-check'],
     queryFn: async () => {
@@ -142,6 +142,24 @@ export default function Home() {
       setAuthLoading(false);
     });
     return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void AsyncStorage.multiGet([ONBOARDING_KEY, 'wanchat-language'])
+      .then(([onboardingEntry, languageEntry]) => {
+        if (!active) return;
+        setOnboardingDone(onboardingEntry[1] === 'accepted');
+        const savedLanguage = languageEntry[1] as Language | null;
+        if (savedLanguage && languages.some((item) => item.code === savedLanguage)) {
+          setLanguage(savedLanguage);
+        }
+        setOnboardingReady(true);
+      })
+      .catch(() => {
+        if (active) setOnboardingReady(true);
+      });
+    return () => { active = false; };
   }, []);
 
   const messageQuery = useQuery({
@@ -215,6 +233,12 @@ export default function Home() {
 
   const pulse = () => {
     if (Platform.OS !== 'web') void Haptics.selectionAsync();
+  };
+
+  const changeLanguage = (nextLanguage: Language) => {
+    setLanguage(nextLanguage);
+    void AsyncStorage.setItem('wanchat-language', nextLanguage);
+    pulse();
   };
 
   const submitAuth = async () => {
