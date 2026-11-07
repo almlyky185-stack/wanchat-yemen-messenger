@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@supabase/supabase-js';
 import {
-  Button, H1, Input, MessageCircle, Paragraph, ScrollView,
-  LogOut, Send, Shield, SizableText, Spinner, XStack, YStack,
+  Button, H1, MessageCircle, Paragraph, ScrollView,
+  LogOut, Send, SizableText, Spinner, XStack, YStack,
 } from '@blinkdotnew/mobile-ui';
 import { getAuthRedirectUrl, supabase, type WanchatMessage, type WanchatProfile } from '@/lib/supabase';
 import { Screen } from '@/components/Screen';
@@ -83,14 +84,6 @@ export default function Home() {
   const [language, setLanguage] = useState<Language>('en');
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone' | null>('email');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [phoneCode, setPhoneCode] = useState('');
-  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
-  const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -178,96 +171,74 @@ export default function Home() {
   const pulse = () => {
     if (Platform.OS !== 'web') void Haptics.selectionAsync();  };
 
-  const submitAuth = async () => {
-    setError(''); setNotice('');
-    if (authMode === 'signup' && !accepted) { setError(t('consentRequired')); return; }
-    if (!email.trim() || !password) { setError(t('errorFallback')); return; }
+  const signInWithGoogle = async () => {
+    setError('');
+    setNotice('');
+    if (!accepted) {
+      setError(rtl ? 'يرجى قراءة إشعار الخصوصية والموافقة عليه أولاً.' : 'Please accept the privacy notice before continuing.');
+      return;
+    }
+
     setBusy(true);
     try {
-      if (authMode === 'signup') {
-        const acceptedAt = new Date().toISOString();
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: email.trim(), password,
-          options: {
-            data: {
-              display_name: displayName.trim() || email.trim().split('@')[0],
-              privacy_policy_version: POLICY_VERSION,
-              privacy_accepted_at: acceptedAt,
-              privacy_language: language,
-            },
-          },
-        });
-        if (signUpError) throw signUpError;
-        setNotice(data.session ? t('accountCreated') : t('confirmEmail'));
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (signInError) throw signInError;
+      const redirectTo = getAuthRedirectUrl();
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: Platform.OS !== 'web',
+          queryParams: { prompt: 'select_account' },
+        },
+      });
+      if (oauthError) throw oauthError;
+
+      if (Platform.OS === 'web') {
+        if (data.url) window.location.assign(data.url);
+        return;
+      }
+
+      if (!data.url) throw new Error('Google sign-in URL was not created.');
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (result.type !== 'success') {
+        if (result.type === 'cancel' || result.type === 'dismiss') return;
+        throw new Error('Google sign-in was not completed.');
+      }
+
+      const callbackUrl = new URL(result.url);
+      const callbackError = callbackUrl.searchParams.get('error_description') || callbackUrl.searchParams.get('error');
+      if (callbackError) throw new Error(callbackError);
+      const code = callbackUrl.searchParams.get('code');
+      if (!code) throw new Error('The sign-in response did not contain an authorization code.');
+
+      const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) throw exchangeError;
+
+      const acceptedAt = new Date().toISOString();
+      const { data: updatedUser, error: metadataError } = await supabase.auth.updateUser({
+        data: {
+          privacy_policy_version: POLICY_VERSION,
+          privacy_accepted_at: acceptedAt,
+          privacy_language: language,
+        },
+      });
+      if (metadataError) throw metadataError;
+
+      const signedInUserId = updatedUser.user?.id ?? sessionData.user?.id;
+      if (signedInUserId) {
+        const { error: consentError } = await supabase.from('wanchat_consents').upsert({
+          user_id: signedInUserId,
+          policy_version: POLICY_VERSION,
+          accepted_at: acceptedAt,
+          language,
+        }, { onConflict: 'user_id,policy_version' });
+        if (consentError) setError(consentError.message);
       }
       pulse();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t('errorFallback'));
-    } finally { setBusy(false); }
-  };
-
-  const sendPhoneCode = async () => {
-    setError(''); setNotice('');
-    const normalizedPhone = phone.trim().replace(/[\s()-]/g, '');
-    if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
-      setError(rtl ? 'أدخل رقم هاتف دولياً صحيحاً، مثل ‎+967 7XX XXX XXX.' : 'Enter a valid international phone number, such as +967 7XX XXX XXX.');
-      return;
+    } finally {
+      setBusy(false);
     }
-    if (authMode === 'signup' && !accepted) { setError(t('consentRequired')); return; }
-    setBusy(true);
-    try {
-      const acceptedAt = new Date().toISOString();
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        phone: normalizedPhone,
-        options: {
-          shouldCreateUser: authMode === 'signup',
-          data: authMode === 'signup' ? {
-            display_name: displayName.trim() || normalizedPhone,
-            privacy_policy_version: POLICY_VERSION,
-            privacy_accepted_at: acceptedAt,
-            privacy_language: language,
-          } : undefined,
-        },
-      });
-      if (otpError) throw otpError;
-      setPhone(normalizedPhone);
-      setPhoneCodeSent(true);
-      setNotice(t('codeSent'));
-      pulse();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t('errorFallback'));
-    } finally { setBusy(false); }
-  };
-
-  const verifyPhoneCode = async () => {
-    setError(''); setNotice('');
-    if (!phoneCode.trim()) { setError(t('errorFallback')); return; }
-    setBusy(true);
-    try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: phone.trim(), token: phoneCode.trim(), type: 'sms',
-      });
-      if (verifyError) throw verifyError;
-      pulse();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t('errorFallback'));
-    } finally { setBusy(false); }
-  };
-
-  const resetPassword = async () => {
-    setError(''); setNotice('');
-    if (!email.trim()) { setError(t('errorFallback')); return; }
-    setBusy(true);
-    try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: getAuthRedirectUrl() });
-      if (resetError) throw resetError;
-      setNotice(t('resetSent'));
-    }
-    catch (reason) { setError(reason instanceof Error ? reason.message : t('errorFallback')); }
-    finally { setBusy(false); }
   };
 
   const signOut = async () => {
@@ -309,63 +280,37 @@ export default function Home() {
             </YStack>
             <Button chromeless onPress={() => { setLanguage(rtl ? 'en' : 'ar'); pulse(); }} color={palette.mint} minWidth={48} height={48} accessibilityLabel="Change language">{rtl ? 'EN' : 'عربي'}</Button>
           </XStack>
-          {authMethod === null ? (
-            <YStack backgroundColor={palette.panel} borderWidth={1} borderColor={palette.border} borderRadius={24} padding="$5" gap="$4">
-              <SizableText color={palette.mint} size="$5" fontWeight="700" textAlign={rtl ? 'right' : 'left'}>{t('chooseMethod')}</SizableText>
-              <Paragraph color={palette.muted} textAlign={rtl ? 'right' : 'left'}>{t('chooseMethodBody')}</Paragraph>
-              <Button onPress={() => { setAuthMethod('email'); setAuthMode('signup'); pulse(); }} minHeight={56} borderRadius={16} backgroundColor={palette.panelLight} color={palette.white} fontWeight="700">
-                <XStack alignItems="center" justifyContent="center" gap="$2"><SizableText color={palette.mint} size="$5">✉</SizableText><SizableText color={palette.white} fontWeight="700">{t('emailOption')}</SizableText></XStack>
+
+          <YStack backgroundColor={palette.panel} borderWidth={1} borderColor={palette.border} borderRadius={24} padding="$5" gap="$4">
+            <YStack alignItems={rtl ? 'flex-end' : 'flex-start'} gap="$2">
+              <SizableText color={palette.mint} size="$3" fontWeight="700">{rtl ? 'تسجيل آمن وسريع' : 'Secure and simple sign-in'}</SizableText>
+              <H1 color={palette.white} fontSize={30} lineHeight={36} textAlign={rtl ? 'right' : 'left'}>{t('app')}</H1>
+              <Paragraph color={palette.muted} textAlign={rtl ? 'right' : 'left'}>{rtl ? 'اختر حساب Google لإنشاء حسابك أو الدخول إلى حسابك الحالي.' : 'Choose a Google account to create your account or sign in.'}</Paragraph>
+            </YStack>
+
+            <YStack backgroundColor={palette.forestDeep} borderColor={palette.border} borderWidth={1} borderRadius={16} padding="$4" gap="$3">
+              <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'}>
+                <SizableText color={palette.mint} fontWeight="700" size="$4">{rtl ? 'الخصوصية قبل المتابعة' : 'Privacy before you continue'}</SizableText>
+              </XStack>
+              <Paragraph color={palette.muted} lineHeight={21} textAlign={rtl ? 'right' : 'left'}>
+                {rtl
+                  ? 'اسمك وصورتك ونبذتك ورسائلك في ساحة المجتمع العامة قد تكون مرئية للآخرين. لا تشارك معلومات خاصة أو حساسة. لا يطلب ون شات جهات اتصالك أو موقعك في هذا الإصدار.'
+                  : 'Your name, photo, bio and messages in the public community room may be visible to others. Do not share private or sensitive information. Wanchat does not access your contacts or location in this release.'}
+              </Paragraph>
+              <Button chromeless minHeight={48} onPress={() => { setAccepted(!accepted); pulse(); }}>
+                <SizableText color={palette.white} textAlign={rtl ? 'right' : 'left'}>
+                  {accepted ? '☑' : '☐'} {rtl ? 'قرأت إشعار الخصوصية وأوافق عليه' : 'I have read and accept the privacy notice'}
+                </SizableText>
               </Button>
             </YStack>
-          ) : (
-            <YStack backgroundColor={palette.panel} borderWidth={1} borderColor={palette.border} borderRadius={24} padding="$5" gap="$4">
-              <YStack alignItems={rtl ? 'flex-end' : 'flex-start'} gap="$2">
-                <SizableText color={palette.mint} size="$3" fontWeight="700">{authMode === 'signup' ? t('create') : t('welcome')}</SizableText>
-                <H1 color={palette.white} fontSize={30} lineHeight={36} textAlign={rtl ? 'right' : 'left'}>{t('app')}</H1>
-                <Paragraph color={palette.muted} textAlign={rtl ? 'right' : 'left'}>{t('tagline')}</Paragraph>
-              </YStack>
-              {authMethod === 'phone' ? (
-                <>
-                  {authMode === 'signup' && <Input value={displayName} onChangeText={setDisplayName} placeholder={t('displayName')} placeholderTextColor={palette.muted} color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />}
-                  <Input value={phone} onChangeText={(value) => { setPhone(value); setPhoneCodeSent(false); }} placeholder={t('phone')} placeholderTextColor={palette.muted} keyboardType="phone-pad" autoComplete="tel" autoCapitalize="none" color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />
-                  <SizableText color={palette.muted} size="$2" textAlign={rtl ? 'right' : 'left'}>{t('phoneExample')}</SizableText>
-                  {authMode === 'signup' && (
-                    <YStack backgroundColor={palette.forestDeep} borderColor={palette.border} borderWidth={1} borderRadius={16} padding="$4" gap="$3">
-                      <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'}><Shield size={17} color={palette.mint} /><SizableText color={palette.white} fontWeight="700" size="$4">{t('privacyTitle')}</SizableText></XStack>
-                      <Paragraph color={palette.muted} lineHeight={21} textAlign={rtl ? 'right' : 'left'}>{t('privacyBody')}</Paragraph>
-                      <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'} minHeight={48}>
-                        <Button chromeless flex={1} minHeight={48} justifyContent={rtl ? 'flex-end' : 'flex-start'} onPress={() => { setAccepted(!accepted); pulse(); }}><SizableText color={palette.white} flex={1} textAlign={rtl ? 'right' : 'left'}>{accepted ? '☑' : '☐'} {t('accept')}</SizableText></Button>
-                      </XStack>
-                    </YStack>
-                  )}
-                  {phoneCodeSent && <Input value={phoneCode} onChangeText={setPhoneCode} placeholder={t('verificationCode')} placeholderTextColor={palette.muted} keyboardType="number-pad" autoComplete="one-time-code" maxLength={8} color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />}
-                </>
-              ) : (
-                <>
-                  {authMode === 'signup' && <Input value={displayName} onChangeText={setDisplayName} placeholder={t('displayName')} placeholderTextColor={palette.muted} color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />}
-                  <Input value={email} onChangeText={setEmail} placeholder={t('email')} placeholderTextColor={palette.muted} keyboardType="email-address" autoCapitalize="none" autoComplete="email" color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />
-                  <Input value={password} onChangeText={setPassword} placeholder={t('password')} placeholderTextColor={palette.muted} secureTextEntry autoCapitalize="none" color={palette.white} backgroundColor={palette.forestDeep} borderColor={palette.border} borderRadius={14} height={52} />
-                  {authMode === 'signup' ? (
-                    <YStack backgroundColor={palette.forestDeep} borderColor={palette.border} borderWidth={1} borderRadius={16} padding="$4" gap="$3">
-                      <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'}><Shield size={17} color={palette.mint} /><SizableText color={palette.white} fontWeight="700" size="$4">{t('privacyTitle')}</SizableText></XStack>
-                      <Paragraph color={palette.muted} lineHeight={21} textAlign={rtl ? 'right' : 'left'}>{t('privacyBody')}</Paragraph>
-                      <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'} minHeight={48}>
-                        <Button chromeless flex={1} minHeight={48} justifyContent={rtl ? 'flex-end' : 'flex-start'} onPress={() => { setAccepted(!accepted); pulse(); }}><SizableText color={palette.white} flex={1} textAlign={rtl ? 'right' : 'left'}>{t('accept')}</SizableText></Button>
-                      </XStack>                    </YStack>
-                  ) : <Button chromeless onPress={resetPassword} minHeight={44} alignSelf={rtl ? 'flex-start' : 'flex-end'} color={palette.mint}>{t('forgot')}</Button>}
-                </>
-              )}
-              {!!error && <Paragraph color={palette.danger} role="alert">{error}</Paragraph>}
-              {!!notice && <Paragraph color={palette.mint}>{notice}</Paragraph>}
-              <Button onPress={authMethod === 'phone' ? (phoneCodeSent ? verifyPhoneCode : sendPhoneCode) : submitAuth} disabled={busy} minHeight={52} borderRadius={16} backgroundColor={palette.mint} color={palette.forestDeep} fontWeight="800" pressStyle={{ opacity: 0.82, scale: 0.98 }}>
-                {busy ? <Spinner color={palette.forestDeep} /> : authMethod === 'phone' ? (phoneCodeSent ? t('verifyCode') : t('sendCode')) : t('continue')}
-              </Button>
-              {authMethod === 'phone' && phoneCodeSent && <Button chromeless onPress={() => void sendPhoneCode()} minHeight={44} color={palette.mint}>{t('sendCode')}</Button>}
-              <Button chromeless minHeight={48} onPress={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAccepted(false); setPhoneCodeSent(false); setPhoneCode(''); setError(''); setNotice(''); pulse(); }} color={palette.white}>
-                {authMode === 'signup' ? t('switchToLogin') : t('switchToSignup')}
-              </Button>
-            </YStack>
-          )}
+
+            {!!error && <Paragraph color={palette.danger} role="alert">{error}</Paragraph>}
+            {!!notice && <Paragraph color={palette.mint}>{notice}</Paragraph>}
+            <Button onPress={() => void signInWithGoogle()} disabled={busy} minHeight={56} borderRadius={16} backgroundColor={palette.mint} color={palette.forestDeep} fontWeight="800" pressStyle={{ opacity: 0.82, scale: 0.98 }}>
+              {busy ? <Spinner color={palette.forestDeep} /> : (rtl ? 'المتابعة باستخدام Google' : 'Continue with Google')}
+            </Button>
+          </YStack>
+
           <SizableText color={palette.muted} size="$2" textAlign="center">{POLICY_VERSION}</SizableText>
           <SizableText color={connectionQuery.isError ? palette.danger : palette.mint} size="$2" textAlign="center">
             {connectionQuery.isLoading ? t('cloudChecking') : connectionQuery.isError ? connectionQuery.error.message : t('cloudConnected')}
