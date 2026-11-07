@@ -19,8 +19,7 @@
         "foregroundImage": "./assets/images/icon-native.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.wanchatyemen.messenger",
-      "minSdkVersion": 24
+      "package": "com.wanchatyemen.messenger"
     },
     "web": {
       "bundler": "metro",
