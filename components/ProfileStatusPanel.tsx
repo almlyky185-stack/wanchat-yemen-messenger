@@ -12,7 +12,7 @@ const colors = {
 };
 const STATUS_CHANNEL = 'wanchat-user-statuses';
 
-type Language = 'en' | 'ar';
+type Language = 'en' | 'ar' | 'hi' | 'fr' | 'it' | 'zh' | 'ko' | 'fa';
 type PanelMode = 'profile' | 'updates';
 type Props = {
   mode: PanelMode;
