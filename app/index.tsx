@@ -316,10 +316,10 @@ export default function Home() {
               <SizableText color={palette.mint} size="$5" fontWeight="700" textAlign={rtl ? 'right' : 'left'}>{t('chooseMethod')}</SizableText>
               <Paragraph color={palette.muted} textAlign={rtl ? 'right' : 'left'}>{t('chooseMethodBody')}</Paragraph>
               <Button onPress={() => { setAuthMethod('phone'); setAuthMode('signup'); pulse(); }} minHeight={56} borderRadius={16} backgroundColor={palette.mint} color={palette.forestDeep} fontWeight="800">
-                <XStack alignItems="center" justifyContent="center" gap="$2"><Phone size={19} color={palette.forestDeep} /><SizableText color={palette.forestDeep} fontWeight="800">{t('phoneOption')}</SizableText></XStack>
+                <XStack alignItems="center" justifyContent="center" gap="$2"><SizableText color={palette.forestDeep} size="$5">☎</SizableText><SizableText color={palette.forestDeep} fontWeight="800">{t('phoneOption')}</SizableText></XStack>
               </Button>
               <Button onPress={() => { setAuthMethod('email'); setAuthMode('signup'); pulse(); }} minHeight={56} borderRadius={16} backgroundColor={palette.panelLight} color={palette.white} fontWeight="700">
-                <XStack alignItems="center" justifyContent="center" gap="$2"><Mail size={19} color={palette.mint} /><SizableText color={palette.white} fontWeight="700">{t('emailOption')}</SizableText></XStack>
+                <XStack alignItems="center" justifyContent="center" gap="$2"><SizableText color={palette.mint} size="$5">✉</SizableText><SizableText color={palette.white} fontWeight="700">{t('emailOption')}</SizableText></XStack>
               </Button>
             </YStack>
           ) : (
@@ -339,8 +339,7 @@ export default function Home() {
                       <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'}><Shield size={17} color={palette.mint} /><SizableText color={palette.white} fontWeight="700" size="$4">{t('privacyTitle')}</SizableText></XStack>
                       <Paragraph color={palette.muted} lineHeight={21} textAlign={rtl ? 'right' : 'left'}>{t('privacyBody')}</Paragraph>
                       <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'} minHeight={48}>
-                        <Checkbox checked={accepted} onCheckedChange={(value) => { setAccepted(value === true); pulse(); }} size="$5" borderColor={accepted ? palette.mint : palette.muted} backgroundColor={accepted ? palette.mint : 'transparent'}><Checkbox.Indicator><SizableText color={palette.forestDeep} fontWeight="800">✓</SizableText></Checkbox.Indicator></Checkbox>
-                        <Button chromeless flex={1} minHeight={48} justifyContent={rtl ? 'flex-end' : 'flex-start'} onPress={() => { setAccepted(!accepted); pulse(); }}><SizableText color={palette.white} flex={1} textAlign={rtl ? 'right' : 'left'}>{t('accept')}</SizableText></Button>
+                        <Button chromeless flex={1} minHeight={48} justifyContent={rtl ? 'flex-end' : 'flex-start'} onPress={() => { setAccepted(!accepted); pulse(); }}><SizableText color={palette.white} flex={1} textAlign={rtl ? 'right' : 'left'}>{accepted ? '☑' : '☐'} {t('accept')}</SizableText></Button>
                       </XStack>
                     </YStack>
                   )}
@@ -356,7 +355,6 @@ export default function Home() {
                       <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'}><Shield size={17} color={palette.mint} /><SizableText color={palette.white} fontWeight="700" size="$4">{t('privacyTitle')}</SizableText></XStack>
                       <Paragraph color={palette.muted} lineHeight={21} textAlign={rtl ? 'right' : 'left'}>{t('privacyBody')}</Paragraph>
                       <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'} minHeight={48}>
-                        <Checkbox checked={accepted} onCheckedChange={(value) => { setAccepted(value === true); pulse(); }} size="$5" borderColor={accepted ? palette.mint : palette.muted} backgroundColor={accepted ? palette.mint : 'transparent'}><Checkbox.Indicator><SizableText color={palette.forestDeep} fontWeight="800">✓</SizableText></Checkbox.Indicator></Checkbox>
                         <Button chromeless flex={1} minHeight={48} justifyContent={rtl ? 'flex-end' : 'flex-start'} onPress={() => { setAccepted(!accepted); pulse(); }}><SizableText color={palette.white} flex={1} textAlign={rtl ? 'right' : 'left'}>{t('accept')}</SizableText></Button>
                       </XStack>
                     </YStack>
