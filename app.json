@@ -1,21 +1,69 @@
 {
   "expo": {
-    "name": "Wanchaty",
-    "slug": "Wanchaty",
+    "name": "Wanchat Yemen",
+    "slug": "wanchat-yemen-app-lxa18bv1",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "icon": "./assets/images/icon-native.png",
+    "scheme": "new.blink.wanchat-yemen-app-lxa18bv1",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wanchatyemen.messenger"
     },
     "android": {
-      "package": "com.almlyky.wanchaty"
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon-native.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.wanchatyemen.messenger"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "asyncRoutes": {
+            "web": false
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/icon-native.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": false
+          }
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
     },
     "extra": {
-      "eas": {
-        "projectId": "9e649514-faee-463b-a241-c7695a878a28"
-      }
+      "router": {
+        "origin": false
+      },
+      "eas": {}
     }
   }
 }

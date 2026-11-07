@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@supabase/supabase-js';
 import {
-  Button, Checkbox, H1, Input, Mail, MessageCircle, Paragraph, Phone, ScrollView,
+  Button, H1, Input, MessageCircle, Paragraph, ScrollView,
   LogOut, Send, Shield, SizableText, Spinner, XStack, YStack,
 } from '@blinkdotnew/mobile-ui';
 import { getAuthRedirectUrl, supabase, type WanchatMessage, type WanchatProfile } from '@/lib/supabase';
