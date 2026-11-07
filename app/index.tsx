@@ -149,7 +149,10 @@ export default function Home() {
     void AsyncStorage.multiGet([ONBOARDING_KEY, 'wanchat-language'])
       .then(([onboardingEntry, languageEntry]) => {
         if (!active) return;
-        setOnboardingDone(onboardingEntry[1] === 'accepted');
+        const previouslyAccepted = onboardingEntry[1] === 'accepted';
+        setOnboardingDone(previouslyAccepted);
+        setAccepted(previouslyAccepted);
+        setPolicyChecked(previouslyAccepted);
         const savedLanguage = languageEntry[1] as Language | null;
         if (savedLanguage && languages.some((item) => item.code === savedLanguage)) {
           setLanguage(savedLanguage);
