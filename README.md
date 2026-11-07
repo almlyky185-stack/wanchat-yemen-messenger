@@ -76,3 +76,16 @@ The app will be available at `http://localhost:3000`
 - The project uses Expo Router for navigation
 - Web version runs on port 3000 by default
 - Bun is 2-10x faster than npm for package installation 
+
+## Email-only authentication
+
+Wanchat uses email address and password for account creation and sign-in. Phone-number sign-in is not offered in the app.
+
+To allow a new account to sign in immediately without an email confirmation link:
+
+1. Open your Supabase project dashboard.
+2. Go to **Authentication → Sign In / Providers → Email**.
+3. Turn **Confirm email** off and save the change.
+4. Keep email/password sign-in enabled.
+
+With **Confirm email** disabled, Supabase automatically treats newly supplied email addresses as confirmed. This means someone can register using an email address they do not own. Consider enabling rate limits and abuse protection, and do not use email ownership as proof of identity until verification is enabled.
