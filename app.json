@@ -19,7 +19,19 @@
         "foregroundImage": "./assets/images/icon-native.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.wanchatyemen.messenger"
+      "package": "com.wanchatyemen.messenger",
+      "permissions": [
+        "android.permission.READ_CONTACTS",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT"
+      ]
     },
     "web": {
       "bundler": "metro",
