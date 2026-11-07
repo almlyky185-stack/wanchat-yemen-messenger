@@ -63,8 +63,10 @@ type Database = {
 
 export const MEDIA_BUCKET = 'wanchat-media';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+// These are public client settings (the publishable key is safe to ship in an app).
+// Environment variables can override them for other deployment environments.
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() || 'https://ipjsykwxqfaujsreacjj.supabase.co';
+const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() || 'sb_publishable_jUF0FqUxPSyvqTxHEJPL1w_jwy_yDGN';
 
 // Keep the native app bootable even when cloud environment variables are missing.
 // Requests will fail visibly until the real Supabase values are configured.
