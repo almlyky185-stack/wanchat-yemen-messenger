@@ -63,9 +63,14 @@ type Database = {
 
 export const MEDIA_BUCKET = 'wanchat-media';
 
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
+const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+
+// Keep the native app bootable even when cloud environment variables are missing.
+// Requests will fail visibly until the real Supabase values are configured.
 export const supabase = createClient<Database>(
-  process.env.EXPO_PUBLIC_SUPABASE_URL!,
-  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabasePublishableKey || 'missing-supabase-publishable-key',
   {
     auth: {
       storage: Platform.OS === 'web' ? undefined : AsyncStorage,
