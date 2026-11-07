@@ -30,16 +30,16 @@ const copy = {
   email: ['Email address', 'البريد الإلكتروني'],
   password: ['Password', 'كلمة المرور'],
   chooseMethod: ['Choose how to continue', 'اختر طريقة المتابعة'],
-  chooseMethodBody: ['Sign in or create your Wanchat account using your email or phone number.', 'سجّل الدخول أو أنشئ حساب ون شات باستخدام بريدك الإلكتروني أو رقم هاتفك.'],
+  chooseMethodBody: ['Sign in or create your Wanchat account using your email address and password.', 'سجّل الدخول أو أنشئ حساب ون شات باستخدام بريدك الإلكتروني وكلمة المرور.'], 
   emailOption: ['Continue with email', 'المتابعة بالبريد الإلكتروني'],
-  phoneOption: ['Continue with phone', 'المتابعة برقم الهاتف'],
-  phone: ['Phone number with country code', 'رقم الهاتف مع رمز الدولة'],
-  phoneExample: ['Example: +967 7XX XXX XXX', 'مثال: ‎+967 7XX XXX XXX'],
-  sendCode: ['Send verification code', 'إرسال رمز التحقق'],
-  codeSent: ['A verification code was sent by SMS.', 'تم إرسال رمز التحقق برسالة نصية.'],
-  verificationCode: ['Verification code', 'رمز التحقق'],
-  verifyCode: ['Verify and continue', 'تحقق وتابع'],
-  changeMethod: ['Choose another method', 'اختر طريقة أخرى'],
+
+
+
+
+
+
+
+
   displayName: ['Your name', 'اسمك'],
   continue: ['Continue', 'متابعة'],
   switchToLogin: ['Already have an account? Sign in', 'لديك حساب؟ سجّل الدخول'],
@@ -70,7 +70,7 @@ const copy = {
   connection: ['Live text room', 'محادثة نصية مباشرة'],
   errorFallback: ['Something went wrong. Please try again.', 'حدث خطأ. حاول مرة أخرى.'],
   resetSent: ['If that email has an account, a password reset link has been sent.', 'إذا كان البريد مرتبطاً بحساب، فسيتم إرسال رابط إعادة تعيين كلمة المرور.'],
-  confirmEmail: ['Check your email to confirm your account, then sign in here.', 'تحقق من بريدك الإلكتروني لتأكيد الحساب، ثم سجّل الدخول هنا.'],
+  confirmEmail: ['Email confirmation is still enabled in Supabase. Turn off Confirm email in the Supabase Email provider settings, then try again.', 'ما زال تأكيد البريد مفعّلاً في Supabase. عطّل خيار Confirm email من إعدادات مزوّد البريد ثم أعد المحاولة.'], 
   accountCreated: ['Your account is ready.', 'تم إنشاء حسابك.'],
   cloudChecking: ['Checking cloud connection…', 'جارٍ التحقق من الاتصال السحابي…'],
   cloudConnected: ['Cloud database connected', 'قاعدة البيانات السحابية متصلة'],
@@ -84,7 +84,7 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone' | null>(null);
+  const [authMethod] = useState<'email'>('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneCode, setPhoneCode] = useState('');
@@ -176,8 +176,7 @@ export default function Home() {
   }, [user?.id, queryClient]);
 
   const pulse = () => {
-    if (Platform.OS !== 'web') void Haptics.selectionAsync();
-  };
+    if (Platform.OS !== 'web') void Haptics.selectionAsync();  };
 
   const submitAuth = async () => {
     setError(''); setNotice('');
@@ -190,7 +189,6 @@ export default function Home() {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(), password,
           options: {
-            emailRedirectTo: getAuthRedirectUrl(),
             data: {
               display_name: displayName.trim() || email.trim().split('@')[0],
               privacy_policy_version: POLICY_VERSION,
@@ -315,9 +313,6 @@ export default function Home() {
             <YStack backgroundColor={palette.panel} borderWidth={1} borderColor={palette.border} borderRadius={24} padding="$5" gap="$4">
               <SizableText color={palette.mint} size="$5" fontWeight="700" textAlign={rtl ? 'right' : 'left'}>{t('chooseMethod')}</SizableText>
               <Paragraph color={palette.muted} textAlign={rtl ? 'right' : 'left'}>{t('chooseMethodBody')}</Paragraph>
-              <Button onPress={() => { setAuthMethod('phone'); setAuthMode('signup'); pulse(); }} minHeight={56} borderRadius={16} backgroundColor={palette.mint} color={palette.forestDeep} fontWeight="800">
-                <XStack alignItems="center" justifyContent="center" gap="$2"><SizableText color={palette.forestDeep} size="$5">☎</SizableText><SizableText color={palette.forestDeep} fontWeight="800">{t('phoneOption')}</SizableText></XStack>
-              </Button>
               <Button onPress={() => { setAuthMethod('email'); setAuthMode('signup'); pulse(); }} minHeight={56} borderRadius={16} backgroundColor={palette.panelLight} color={palette.white} fontWeight="700">
                 <XStack alignItems="center" justifyContent="center" gap="$2"><SizableText color={palette.mint} size="$5">✉</SizableText><SizableText color={palette.white} fontWeight="700">{t('emailOption')}</SizableText></XStack>
               </Button>
@@ -356,8 +351,7 @@ export default function Home() {
                       <Paragraph color={palette.muted} lineHeight={21} textAlign={rtl ? 'right' : 'left'}>{t('privacyBody')}</Paragraph>
                       <XStack alignItems="center" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'} minHeight={48}>
                         <Button chromeless flex={1} minHeight={48} justifyContent={rtl ? 'flex-end' : 'flex-start'} onPress={() => { setAccepted(!accepted); pulse(); }}><SizableText color={palette.white} flex={1} textAlign={rtl ? 'right' : 'left'}>{t('accept')}</SizableText></Button>
-                      </XStack>
-                    </YStack>
+                      </XStack>                    </YStack>
                   ) : <Button chromeless onPress={resetPassword} minHeight={44} alignSelf={rtl ? 'flex-start' : 'flex-end'} color={palette.mint}>{t('forgot')}</Button>}
                 </>
               )}
@@ -370,7 +364,6 @@ export default function Home() {
               <Button chromeless minHeight={48} onPress={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAccepted(false); setPhoneCodeSent(false); setPhoneCode(''); setError(''); setNotice(''); pulse(); }} color={palette.white}>
                 {authMode === 'signup' ? t('switchToLogin') : t('switchToSignup')}
               </Button>
-              <Button chromeless minHeight={44} onPress={() => { setAuthMethod(null); setPhoneCodeSent(false); setPhoneCode(''); setError(''); setNotice(''); }} color={palette.muted}>{t('changeMethod')}</Button>
             </YStack>
           )}
           <SizableText color={palette.muted} size="$2" textAlign="center">{POLICY_VERSION}</SizableText>
