@@ -84,7 +84,7 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
-  const [authMethod] = useState<'email'>('email');
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone' | null>('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneCode, setPhoneCode] = useState('');
