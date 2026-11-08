@@ -167,3 +167,12 @@ do $$ begin
   begin alter publication supabase_realtime add table public.wanchat_conversation_members; exception when duplicate_object then null; end;
  end if;
 end $$;
+
+-- Users can update only their own read marker; users can stop their own location sharing.
+drop policy if exists wanchat_member_update_own_read_marker on public.wanchat_conversation_members;
+create policy wanchat_member_update_own_read_marker
+on public.wanchat_conversation_members for update to authenticated
+using(user_id=(select auth.uid()))
+with check(user_id=(select auth.uid()));
+grant update on public.wanchat_conversation_members to authenticated;
+grant delete on public.wanchat_live_locations to authenticated;
