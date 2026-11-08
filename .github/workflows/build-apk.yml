@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    name: Build ${{ matrix.variant }} APK
+    name: Build ${{ matrix.variant }} standalone APK
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -62,14 +62,22 @@ jobs:
           APP_VARIANT: ${{ matrix.variant }}
         run: npx expo prebuild --platform android --clean --non-interactive
 
-      - name: Build installable debug APK
+      # Release builds embed the JavaScript bundle in the APK.
+      # Debug builds are Metro-dependent and must not be distributed.
+      - name: Build standalone release APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK
+      - name: Verify embedded JavaScript bundle
+        run: |
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK"
+          unzip -l "$APK" | grep -E 'assets/index.android.bundle|assets/.+\.bundle'
+
+      - name: Upload standalone APK
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
