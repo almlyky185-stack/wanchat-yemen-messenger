@@ -250,3 +250,14 @@ using (
       and theirs.user_id = wanchat_presence.user_id
   )
 );
+
+
+-- Further hardening: prevent private-message identity/conversation rewrites.
+revoke update on public.wanchat_private_messages from authenticated;
+grant update (body, edited_at, deleted_at) on public.wanchat_private_messages to authenticated;
+
+-- Explicitly scope SECURITY DEFINER RPC execution to authenticated accounts.
+revoke all on function public.wanchat_create_direct_conversation(uuid) from public, anon;
+grant execute on function public.wanchat_create_direct_conversation(uuid) to authenticated;
+revoke all on function public.wanchat_create_group(text, uuid[]) from public, anon;
+grant execute on function public.wanchat_create_group(text, uuid[]) to authenticated;
