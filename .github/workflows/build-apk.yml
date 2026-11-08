@@ -69,11 +69,40 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Verify embedded JavaScript bundle
+      - name: Verify APK signature and embedded JavaScript bundle
         run: |
           APK="android/app/build/outputs/apk/release/app-release.apk"
           test -f "$APK"
-          unzip -l "$APK" | grep -E 'assets/index.android.bundle|assets/.+\.bundle'
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          unzip -l "$APK" | grep -E 'assets/index.android.bundle|assets/.+\\.bundle'
+
+      - name: Install and launch on Android 13 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            APK="android/app/build/outputs/apk/release/app-release.apk"
+            APP_ID="com.wanchatyemen.messenger"
+            if [ "${{ matrix.variant }}" = "lite" ]; then APP_ID="com.wanchatyemen.messenger.lite"; fi
+            adb install -r "$APK"
+            adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
+            sleep 20
+            if ! adb shell pidof "$APP_ID" >/dev/null; then
+              adb logcat -d -t 800 > startup-logcat.txt
+              cat startup-logcat.txt
+              exit 1
+            fi
+
+      - name: Upload startup crash log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: startup-logcat-${{ matrix.variant }}
+          path: startup-logcat.txt
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload standalone APK
         uses: actions/upload-artifact@v4
