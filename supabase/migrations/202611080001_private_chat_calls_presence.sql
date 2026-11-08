@@ -176,3 +176,77 @@ using(user_id=(select auth.uid()))
 with check(user_id=(select auth.uid()));
 grant update on public.wanchat_conversation_members to authenticated;
 grant delete on public.wanchat_live_locations to authenticated;
+
+
+-- Security hardening applied after review (2026-11-08).
+-- Restrict membership edits to the read marker only.
+revoke update on public.wanchat_conversation_members from authenticated;
+grant update (last_read_at) on public.wanchat_conversation_members to authenticated;
+
+-- Call participants can update call state, but cannot rewrite caller/conversation identity.
+revoke update on public.wanchat_call_sessions from authenticated;
+grant update (status, answered_at, ended_at) on public.wanchat_call_sessions to authenticated;
+
+-- Remove overlapping permissive policies and require both signaling endpoints to be members.
+drop policy if exists wanchat_call_signal_insert on public.wanchat_call_signals;
+drop policy if exists wanchat_call_signals_insert on public.wanchat_call_signals;
+create policy wanchat_call_signals_insert
+on public.wanchat_call_signals for insert to authenticated
+with check (
+  sender_id = (select auth.uid())
+  and recipient_id <> sender_id
+  and exists (
+    select 1 from public.wanchat_call_sessions c
+    where c.id = call_id
+      and private.is_conversation_member(c.conversation_id)
+      and exists (
+        select 1 from public.wanchat_conversation_members m
+        where m.conversation_id = c.conversation_id and m.user_id = sender_id
+      )
+      and exists (
+        select 1 from public.wanchat_conversation_members m
+        where m.conversation_id = c.conversation_id and m.user_id = recipient_id
+      )
+  )
+);
+drop policy if exists wanchat_call_signals_read on public.wanchat_call_signals;
+create policy wanchat_call_signals_read
+on public.wanchat_call_signals for select to authenticated
+using (
+  (sender_id = (select auth.uid()) or recipient_id = (select auth.uid()))
+  and exists (
+    select 1 from public.wanchat_call_sessions c
+    where c.id = call_id and private.is_conversation_member(c.conversation_id)
+  )
+);
+
+-- Do not expose exact coordinates or presence to every authenticated account.
+drop policy if exists wanchat_locations_visible on public.wanchat_live_locations;
+create policy wanchat_locations_visible
+on public.wanchat_live_locations for select to authenticated
+using (
+  sharing_until > now()
+  and user_id <> (select auth.uid())
+  and exists (
+    select 1
+    from public.wanchat_conversation_members mine
+    join public.wanchat_conversation_members theirs
+      on theirs.conversation_id = mine.conversation_id
+    where mine.user_id = (select auth.uid())
+      and theirs.user_id = wanchat_live_locations.user_id
+  )
+);
+drop policy if exists wanchat_presence_read on public.wanchat_presence;
+create policy wanchat_presence_read
+on public.wanchat_presence for select to authenticated
+using (
+  user_id = (select auth.uid())
+  or exists (
+    select 1
+    from public.wanchat_conversation_members mine
+    join public.wanchat_conversation_members theirs
+      on theirs.conversation_id = mine.conversation_id
+    where mine.user_id = (select auth.uid())
+      and theirs.user_id = wanchat_presence.user_id
+  )
+);
