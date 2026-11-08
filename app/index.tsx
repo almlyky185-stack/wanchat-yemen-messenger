@@ -36,7 +36,7 @@ const copy = {
   email: ['Email address', 'البريد الإلكتروني'],
   password: ['Password', 'كلمة المرور'],
   chooseMethod: ['Choose how to continue', 'اختر طريقة المتابعة'],
-  chooseMethodBody: ['Sign in or create your Wanchat account using your email or phone number.', 'سجّل الدخول أو أنشئ حساب ون شات باستخدام بريدك الإلكتروني أو رقم هاتفك.'],
+  chooseMethodBody: ['Create or access your Wanchat account securely with your Google account. Google is the only sign-in method.', 'أنشئ حسابك أو ادخل إلى ون شات بأمان باستخدام حساب Google. تسجيل Google هو الطريقة الوحيدة للدخول.'],
   emailOption: ['Continue with email', 'المتابعة بالبريد الإلكتروني'],
   phoneOption: ['Continue with phone', 'المتابعة برقم الهاتف'],
   googleOption: ['Continue with Google', 'المتابعة باستخدام Google'],
@@ -53,7 +53,7 @@ const copy = {
   switchToSignup: ['New to Wanchat? Create an account', 'جديد في ون شات؟ أنشئ حساباً'],
   forgot: ['Forgot password?', 'نسيت كلمة المرور؟'],
   privacyTitle: ['Privacy before you join', 'الخصوصية قبل الانضمام'],
-  privacyBody: ['Your account uses the email address or phone number you choose. Your profile name, photo and bio, status updates, and messages in the public lounge are visible to anyone, including signed-out visitors. Status updates expire after 24 hours. Do not share private or sensitive information. Wanchat does not request contacts or location in this version. We store account, profile, status, message and consent records to provide the service; account deletion is not available yet.', 'يستخدم حسابك البريد الإلكتروني أو رقم الهاتف الذي تختاره. اسم ملفك الشخصي وصورتك ونبذتك وحالاتك ورسائلك في الساحة العامة مرئية للجميع، بما في ذلك الزوار غير المسجلين. تنتهي الحالات بعد ٢٤ ساعة. لا تشارك معلومات خاصة أو حساسة. لا يطلب ون شات جهات اتصالك أو موقعك في هذا الإصدار. نحتفظ ببيانات الحساب والملف الشخصي والحالات والرسائل والموافقة لتقديم الخدمة؛ حذف الحساب غير متاح حالياً.'],
+  privacyBody: ['Your account is authenticated through Google. Your profile name, photo and bio, status updates, and messages in the public lounge are visible to anyone, including signed-out visitors. Status updates expire after 24 hours. Do not share private or sensitive information. Wanchat does not request contacts or location in this version. We store account, profile, status, message and consent records to provide the service; account deletion is not available yet.', 'يتم تسجيل الدخول إلى حسابك عبر Google فقط. اسم ملفك الشخصي وصورتك ونبذتك وحالاتك ورسائلك في الساحة العامة مرئية للجميع، بما في ذلك الزوار غير المسجلين. تنتهي الحالات بعد ٢٤ ساعة. لا تشارك معلومات خاصة أو حساسة. لا يطلب ون شات جهات اتصالك أو موقعك في هذا الإصدار. نحتفظ ببيانات الحساب والملف الشخصي والحالات والرسائل والموافقة لتقديم الخدمة؛ حذف الحساب غير متاح حالياً.']
   accept: ['I have read and accept the privacy notice', 'قرأت إشعار الخصوصية وأوافق عليه'],
   consentRequired: ['Accept the privacy notice before creating an account.', 'يرجى الموافقة على إشعار الخصوصية قبل إنشاء الحساب.'],
   chats: ['Community', 'المجتمع'],
@@ -458,12 +458,6 @@ export default function Home() {
               <Paragraph color={palette.muted} textAlign={rtl ? 'right' : 'left'}>{t('chooseMethodBody')}</Paragraph>
               <Button onPress={() => void signInWithGoogle()} disabled={busy} minHeight={56} borderRadius={16} backgroundColor={palette.mint} color={palette.forestDeep} fontWeight="800">
                 <XStack alignItems="center" justifyContent="center" gap="$2"><SizableText color={palette.forestDeep} size="$5">G</SizableText><SizableText color={palette.forestDeep} fontWeight="800">{t('googleOption')}</SizableText></XStack>
-              </Button>
-              <Button onPress={() => { setAuthMethod('phone'); setAuthMode('signup'); pulse(); }} minHeight={56} borderRadius={16} backgroundColor={palette.mint} color={palette.forestDeep} fontWeight="800">
-                <XStack alignItems="center" justifyContent="center" gap="$2"><SizableText color={palette.forestDeep} size="$5">☎</SizableText><SizableText color={palette.forestDeep} fontWeight="800">{t('phoneOption')}</SizableText></XStack>
-              </Button>
-              <Button onPress={() => { setAuthMethod('email'); setAuthMode('signup'); pulse(); }} minHeight={56} borderRadius={16} backgroundColor={palette.panelLight} color={palette.white} fontWeight="700">
-                <XStack alignItems="center" justifyContent="center" gap="$2"><SizableText color={palette.mint} size="$5">✉</SizableText><SizableText color={palette.white} fontWeight="700">{t('emailOption')}</SizableText></XStack>
               </Button>
             </YStack>
           ) : (
