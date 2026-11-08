@@ -84,17 +84,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           script: |
-            APK="android/app/build/outputs/apk/release/app-release.apk"
-            APP_ID="com.wanchatyemen.messenger"
-            if [ "${{ matrix.variant }}" = "lite" ]; then APP_ID="com.wanchatyemen.messenger.lite"; fi
-            adb install -r "$APK"
-            adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
-            sleep 20
-            if ! adb shell pidof "$APP_ID" >/dev/null; then
-              adb logcat -d -t 800 > startup-logcat.txt
-              cat startup-logcat.txt
-              exit 1
-            fi
+            APK="android/app/build/outputs/apk/release/app-release.apk"; APP_ID="com.wanchatyemen.messenger"; if [ "${{ matrix.variant }}" = "lite" ]; then APP_ID="com.wanchatyemen.messenger.lite"; fi; test -f "$APK" && adb install -r "$APK" && adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 && sleep 20; if ! adb shell pidof "$APP_ID" >/dev/null; then adb logcat -d -t 800 > startup-logcat.txt; cat startup-logcat.txt; exit 1; fi
 
       - name: Upload startup crash log
         if: failure()
