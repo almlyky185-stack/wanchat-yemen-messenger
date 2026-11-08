@@ -67,10 +67,8 @@ jobs:
       - name: Increase Gradle distribution download timeout
         run: |
           WRAPPER="android/gradle/wrapper/gradle-wrapper.properties"
-          grep -q '^networkTimeout=' "$WRAPPER" && sed -i 's/^networkTimeout=.*/networkTimeout=120000/' "$WRAPPER" || printf '\nnetworkTimeout=120000\n' >> "$WRAPPER"
+          grep -q '^networkTimeout=' "$WRAPPER" && sed -i 's/^networkTimeout=.*/networkTimeout=120000/' "$WRAPPER" || printf '\\nnetworkTimeout=120000\\n' >> "$WRAPPER"
 
-      # Release builds embed the JavaScript bundle in the APK.
-      # Debug builds are Metro-dependent and must not be distributed.
       - name: Build standalone release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
@@ -89,37 +87,20 @@ jobs:
           arch: x86_64
           profile: pixel_2
           script: |
-            set -euo pipefail
+            set -eu
             APK="android/app/build/outputs/apk/release/app-release.apk"
             APP_ID="com.wanchatyemen.messenger"
-            if [ "${{ matrix.variant }}" = "lite" ]; then
-              APP_ID="com.wanchatyemen.messenger.lite"
-            fi
-
+            [ "${{ matrix.variant }}" != "lite" ] || APP_ID="com.wanchatyemen.messenger.lite"
             test -f "$APK"
             adb install -r "$APK"
             adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
             sleep 20
-
-            # Capture diagnostics even when the app process remains alive but its UI failed.
             adb logcat -d -v time -t 3000 > startup-logcat.txt
             adb exec-out screencap -p > startup-screen.png || true
-
-            if ! adb shell pidof "$APP_ID" >/dev/null; then
-              echo "FAIL: app process exited after launch"
-              cat startup-logcat.txt
-              exit 1
-            fi
-
+            adb shell pidof "$APP_ID" >/dev/null || { echo "FAIL: app process exited after launch"; cat startup-logcat.txt; exit 1; }
             adb shell uiautomator dump /sdcard/wanchat-window.xml
             adb pull /sdcard/wanchat-window.xml startup-window.xml
-
-            if ! grep -Eiq "إعداد التطبيق لأول مرة|خصوصيتك وأذونات الجهاز|Wanchat Yemen|جارٍ تجهيز إعدادات التطبيق" startup-window.xml; then
-              echo "FAIL: expected Wanchat first screen was not found in Android UI hierarchy"
-              cat startup-window.xml
-              cat startup-logcat.txt
-              exit 1
-            fi
+            grep -Eiq "إعداد التطبيق لأول مرة|خصوصيتك وأذونات الجهاز|Wanchat Yemen|جارٍ تجهيز إعدادات التطبيق" startup-window.xml || { echo "FAIL: expected Wanchat first screen was not found in Android UI hierarchy"; cat startup-window.xml; cat startup-logcat.txt; exit 1; }
 
       - name: Upload startup crash log
         if: failure()
