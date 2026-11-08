@@ -450,9 +450,7 @@ export default function Home() {
               <SizableText color={palette.white} size="$8" fontWeight="800">{t('app')}</SizableText>
               <SizableText color={palette.muted} size="$3">{t('tagline')}</SizableText>
             </YStack>
-            <Button chromeless onPress={() => changeLanguage('ar')} color={palette.mint} minWidth={48} height={48}>العربية</Button>
-          </XStack>
-          <XStack flexWrap="wrap" justifyContent="center" gap="$2">{languages.map((item) => <Button key={item.code} size="$2" minHeight={34} paddingHorizontal="$2" borderRadius={10} backgroundColor={language === item.code ? palette.mint : palette.panelLight} color={language === item.code ? palette.forestDeep : palette.white} onPress={() => changeLanguage(item.code)}>{item.label}</Button>)}</XStack>
+            </XStack>
           {authMethod === null ? (
             <YStack backgroundColor={palette.panel} borderWidth={1} borderColor={palette.border} borderRadius={24} padding="$5" gap="$4">
               <SizableText color={palette.mint} size="$5" fontWeight="700" textAlign={rtl ? 'right' : 'left'}>{t('chooseMethod')}</SizableText>
@@ -536,13 +534,12 @@ export default function Home() {
             <SizableText color={palette.white} size="$6" fontWeight="800">{t('app')}</SizableText>
             <SizableText color={palette.muted} size="$2">{ownProfile?.display_name || (typeof user.user_metadata?.display_name === 'string' ? user.user_metadata.display_name : user.email ?? '')}</SizableText>
           </YStack>
-          <Button chromeless onPress={() => { setLanguage(rtl ? 'en' : 'ar'); pulse(); }} color={palette.mint} minWidth={48} height={48}>{rtl ? 'EN' : 'عربي'}</Button>
           <Button chromeless onPress={() => void signOut()} color={palette.muted} minWidth={48} height={48} accessibilityLabel={t('signOut')}><LogOut size={18} color={palette.muted} /></Button>
         </XStack>
         <XStack marginHorizontal="$3" marginBottom="$3" padding="$1" backgroundColor={palette.panel} borderRadius={15}>
           {(['chats', 'updates', 'profile', 'privacy'] as const).map((tab) => (
             <Button key={tab} flex={1} minHeight={44} borderRadius={12} paddingHorizontal="$1" onPress={() => { setActiveTab(tab); pulse(); }} backgroundColor={activeTab === tab ? palette.panelLight : 'transparent'} color={activeTab === tab ? palette.mint : palette.muted}>
-              {tab === 'chats' ? t('chats') : tab === 'privacy' ? t('privacy') : tab === 'updates' ? (rtl ? 'الحالات' : 'Updates') : (rtl ? 'الملف' : 'Profile')}
+              {tab === 'chats' ? t('chats') : tab === 'privacy' ? (rtl ? 'الإعدادات' : 'Settings') : tab === 'updates' ? (rtl ? 'الحالات' : 'Updates') : (rtl ? 'الملف' : 'Profile')}
             </Button>
           ))}
         </XStack>
@@ -586,6 +583,14 @@ export default function Home() {
         ) : activeTab === 'privacy' ? (
           <ScrollView flex={1}>
             <YStack padding="$4" gap="$3">
+              <SizableText color={palette.white} size="$7" fontWeight="800" textAlign={rtl ? 'right' : 'left'}>{rtl ? 'الإعدادات' : 'Settings'}</SizableText>
+              <YStack backgroundColor={palette.panel} borderColor={palette.border} borderWidth={1} borderRadius={16} padding="$4" gap="$3">
+                <SizableText color={palette.mint} fontWeight="800" size="$5" textAlign={rtl ? 'right' : 'left'}>{rtl ? 'لغة التطبيق' : 'App language'}</SizableText>
+                <Paragraph color={palette.muted} textAlign={rtl ? 'right' : 'left'}>{rtl ? 'العربية هي اللغة الأساسية. يمكنك اختيار لغة أخرى اختيارياً.' : 'Arabic is the default language. You can optionally choose another language.'}</Paragraph>
+                <XStack flexWrap="wrap" gap="$2" flexDirection={rtl ? 'row-reverse' : 'row'}>
+                  {languages.map((item) => <Button key={item.code} size="$2" minHeight={40} paddingHorizontal="$3" borderRadius={10} backgroundColor={language === item.code ? palette.mint : palette.panelLight} color={language === item.code ? palette.forestDeep : palette.white} onPress={() => changeLanguage(item.code)}>{item.label}</Button>)}
+                </XStack>
+              </YStack>
               <SizableText color={palette.white} size="$7" fontWeight="800" textAlign={rtl ? 'right' : 'left'}>{t('privacyStatus')}</SizableText>
               {[
                 [t('locationOff'), t('noContacts'), t('noMesh')],
