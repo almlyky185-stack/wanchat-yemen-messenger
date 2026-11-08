@@ -3,6 +3,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  BlinkProvider,
+  BlinkToastProvider,
+  createTamagui,
+  tamaguiDefaultConfig,
+  Theme,
+} from '@blinkdotnew/mobile-ui';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,18 +20,26 @@ const queryClient = new QueryClient({
   },
 });
 
+const config = createTamagui({ ...tamaguiDefaultConfig });
+
 export default function NativeRootLayout() {
   useFrameworkReady();
 
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="light" />
-      </QueryClientProvider>
+      <BlinkProvider config={config} defaultTheme="dark">
+        <Theme name="dark">
+          <QueryClientProvider client={queryClient}>
+            <BlinkToastProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <StatusBar style="light" />
+            </BlinkToastProvider>
+          </QueryClientProvider>
+        </Theme>
+      </BlinkProvider>
     </SafeAreaProvider>
   );
 }
