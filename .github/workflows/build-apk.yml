@@ -1,14 +1,29 @@
-name: Build Wanchat Yemen APK
+name: Build Wanchat Yemen APKs
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+      - setup/expo-android-variants
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Build ${{ matrix.variant }} APK
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: full
+            app_name: Wanchat Yemen
+            artifact_name: wanchat-yemen-apk
+          - variant: lite
+            app_name: Wanchat Lite
+            artifact_name: wanchat-lite-apk
 
     steps:
       - name: Get project
@@ -18,6 +33,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -27,12 +43,11 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+        with:
+          packages: platform-tools;platforms;android-36;build-tools;36.0.0
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: TypeScript check
         run: npx tsc --noEmit
@@ -41,7 +56,9 @@ jobs:
         run: npx expo-doctor
 
       - name: Generate native Android project
-        run: npx expo prebuild --platform android --non-interactive
+        env:
+          APP_VARIANT: ${{ matrix.variant }}
+        run: npx expo prebuild --platform android --clean --non-interactive
 
       - name: Build installable debug APK
         working-directory: android
@@ -50,7 +67,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: wanchat-yemen-debug-apk
+          name: ${{ matrix.artifact_name }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
