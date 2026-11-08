@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - setup/expo-android-variants
+      - feature/wanchat-production-hardening
 
 permissions:
   contents: read
