@@ -32,25 +32,10 @@ const copy = {
   signup: ['Create account', 'إنشاء حساب'],
   create: ['Create your account', 'أنشئ حسابك'],
   welcome: ['Welcome back', 'مرحباً بعودتك'],
-  email: ['Email address', 'البريد الإلكتروني'],
-  password: ['Password', 'كلمة المرور'],
-  chooseMethod: ['Choose how to continue', 'اختر طريقة المتابعة'],
-  chooseMethodBody: ['Sign in or create your Wanchat account using your email or phone number.', 'سجّل الدخول أو أنشئ حساب ون شات باستخدام بريدك الإلكتروني أو رقم هاتفك.'],
-  emailOption: ['Continue with email', 'المتابعة بالبريد الإلكتروني'],
-  phoneOption: ['Continue with phone', 'المتابعة برقم الهاتف'],
+  chooseMethod: ['Sign in securely with Google', 'سجّل الدخول بأمان باستخدام Google'],
+  chooseMethodBody: ['Choose a Google account on your device. If this is your first time, Wanchat will create your account automatically.', 'اختر حساب Google من جهازك. إذا كانت هذه أول مرة، سينشئ ون شات حسابك تلقائياً.'],
   googleOption: ['Continue with Google', 'المتابعة باستخدام Google'],
-  phone: ['Phone number with country code', 'رقم الهاتف مع رمز الدولة'],
-  phoneExample: ['Example: +967 7XX XXX XXX', 'مثال: ‎+967 7XX XXX XXX'],
-  sendCode: ['Send verification code', 'إرسال رمز التحقق'],
-  codeSent: ['A verification code was sent by SMS.', 'تم إرسال رمز التحقق برسالة نصية.'],
-  verificationCode: ['Verification code', 'رمز التحقق'],
-  verifyCode: ['Verify and continue', 'تحقق وتابع'],
-  changeMethod: ['Choose another method', 'اختر طريقة أخرى'],
-  displayName: ['Your name', 'اسمك'],
-  continue: ['Continue', 'متابعة'],
-  switchToLogin: ['Already have an account? Sign in', 'لديك حساب؟ سجّل الدخول'],
-  switchToSignup: ['New to Wanchat? Create an account', 'جديد في ون شات؟ أنشئ حساباً'],
-  forgot: ['Forgot password?', 'نسيت كلمة المرور؟'],
+  continue: ['Continue with Google', 'المتابعة باستخدام Google'],
   privacyTitle: ['Privacy before you join', 'الخصوصية قبل الانضمام'],
   privacyBody: ['Your account uses the email address or phone number you choose. Your profile name, photo and bio, status updates, and messages in the public lounge are visible to anyone, including signed-out visitors. Status updates expire after 24 hours. Do not share private or sensitive information. Wanchat does not request contacts or location in this version. We store account, profile, status, message and consent records to provide the service; account deletion is not available yet.', 'يستخدم حسابك البريد الإلكتروني أو رقم الهاتف الذي تختاره. اسم ملفك الشخصي وصورتك ونبذتك وحالاتك ورسائلك في الساحة العامة مرئية للجميع، بما في ذلك الزوار غير المسجلين. تنتهي الحالات بعد ٢٤ ساعة. لا تشارك معلومات خاصة أو حساسة. لا يطلب ون شات جهات اتصالك أو موقعك في هذا الإصدار. نحتفظ ببيانات الحساب والملف الشخصي والحالات والرسائل والموافقة لتقديم الخدمة؛ حذف الحساب غير متاح حالياً.'],
   accept: ['I have read and accept the privacy notice', 'قرأت إشعار الخصوصية وأوافق عليه'],
@@ -75,9 +60,6 @@ const copy = {
   signOut: ['Sign out', 'تسجيل الخروج'],
   connection: ['Live text room', 'محادثة نصية مباشرة'],
   errorFallback: ['Something went wrong. Please try again.', 'حدث خطأ. حاول مرة أخرى.'],
-  resetSent: ['If that email has an account, a password reset link has been sent.', 'إذا كان البريد مرتبطاً بحساب، فسيتم إرسال رابط إعادة تعيين كلمة المرور.'],
-  confirmEmail: ['Check your email to confirm your account, then sign in here.', 'تحقق من بريدك الإلكتروني لتأكيد الحساب، ثم سجّل الدخول هنا.'],
-  accountCreated: ['Your account is ready.', 'تم إنشاء حسابك.'],
   cloudChecking: ['Checking cloud connection…', 'جارٍ التحقق من الاتصال السحابي…'],
   cloudConnected: ['Cloud database connected', 'قاعدة البيانات السحابية متصلة'],
   loading: ['Opening your Wanchat…', 'جارٍ فتح ون شات…'],
@@ -102,14 +84,6 @@ export default function Home() {
   const [language, setLanguage] = useState<Language>('ar');
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone' | null>(null);
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [phoneCode, setPhoneCode] = useState('');
-  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
-  const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [onboardingReady, setOnboardingReady] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState(false);
@@ -244,38 +218,6 @@ export default function Home() {
     pulse();
   };
 
-  const submitAuth = async () => {
-    setError(''); setNotice('');
-    if (authMode === 'signup' && !accepted) { setError(t('consentRequired')); return; }
-    if (!email.trim() || !password) { setError(t('errorFallback')); return; }
-    setBusy(true);
-    try {
-      if (authMode === 'signup') {
-        const acceptedAt = new Date().toISOString();
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: email.trim(), password,
-          options: {
-            emailRedirectTo: getAuthRedirectUrl(),
-            data: {
-              display_name: displayName.trim() || email.trim().split('@')[0],
-              privacy_policy_version: POLICY_VERSION,
-              privacy_accepted_at: acceptedAt,
-              privacy_language: language,
-            },
-          },
-        });
-        if (signUpError) throw signUpError;
-        setNotice(data.session ? t('accountCreated') : t('confirmEmail'));
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (signInError) throw signInError;
-      }
-      pulse();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t('errorFallback'));
-    } finally { setBusy(false); }
-  };
-
   const signInWithGoogle = async () => {
     setError(''); setNotice(''); setBusy(true);
     try {
@@ -301,67 +243,6 @@ export default function Home() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t('errorFallback'));
     } finally { setBusy(false); }
-  };
-
-  const sendPhoneCode = async () => {
-    setError(''); setNotice('');
-    const normalizedPhone = phone.trim().replace(/[\s()-]/g, '');
-    if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
-      setError(rtl ? 'أدخل رقم هاتف دولياً صحيحاً، مثل ‎+967 7XX XXX XXX.' : 'Enter a valid international phone number, such as +967 7XX XXX XXX.');
-      return;
-    }
-    if (authMode === 'signup' && !accepted) { setError(t('consentRequired')); return; }
-    setBusy(true);
-    try {
-      const acceptedAt = new Date().toISOString();
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        phone: normalizedPhone,
-        options: {
-          shouldCreateUser: authMode === 'signup',
-          data: authMode === 'signup' ? {
-            display_name: displayName.trim() || normalizedPhone,
-            privacy_policy_version: POLICY_VERSION,
-            privacy_accepted_at: acceptedAt,
-            privacy_language: language,
-          } : undefined,
-        },
-      });
-      if (otpError) throw otpError;
-      setPhone(normalizedPhone);
-      setPhoneCodeSent(true);
-      setNotice(t('codeSent'));
-      pulse();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t('errorFallback'));
-    } finally { setBusy(false); }
-  };
-
-  const verifyPhoneCode = async () => {
-    setError(''); setNotice('');
-    if (!phoneCode.trim()) { setError(t('errorFallback')); return; }
-    setBusy(true);
-    try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: phone.trim(), token: phoneCode.trim(), type: 'sms',
-      });
-      if (verifyError) throw verifyError;
-      pulse();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t('errorFallback'));
-    } finally { setBusy(false); }
-  };
-
-  const resetPassword = async () => {
-    setError(''); setNotice('');
-    if (!email.trim()) { setError(t('errorFallback')); return; }
-    setBusy(true);
-    try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: getAuthRedirectUrl() });
-      if (resetError) throw resetError;
-      setNotice(t('resetSent'));
-    }
-    catch (reason) { setError(reason instanceof Error ? reason.message : t('errorFallback')); }
-    finally { setBusy(false); }
   };
 
   const signOut = async () => {
