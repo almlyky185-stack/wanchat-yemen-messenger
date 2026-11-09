@@ -96,7 +96,10 @@ jobs:
           profile: pixel_2
           script: |
             set -eu
-            APK="$PWD/android/app/build/outputs/apk/release/app-release.apk"
+            cd "$GITHUB_WORKSPACE"
+            echo "Workspace: $PWD"
+            ls -l android/app/build/outputs/apk/release/
+            APK="$GITHUB_WORKSPACE/android/app/build/outputs/apk/release/app-release.apk"
             APP_ID="com.wanchatyemen.messenger"
             [ "${{ matrix.variant }}" != "lite" ] || APP_ID="com.wanchatyemen.messenger.lite"
             test -f "$APK"
