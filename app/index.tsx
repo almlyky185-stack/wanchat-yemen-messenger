@@ -13,6 +13,7 @@ import {
 import { getAuthRedirectUrl, supabase, type WanchatMessage, type WanchatProfile } from '@/lib/supabase';
 import { Screen } from '@/components/Screen';
 import { ProfileStatusPanel } from '@/components/ProfileStatusPanel';
+import { PrivateChatsPanel } from '@/components/PrivateChatsPanel';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -94,7 +95,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [activeTab, setActiveTab] = useState<'chats' | 'updates' | 'profile' | 'privacy'>('chats');
+  const [activeTab, setActiveTab] = useState<'chats' | 'private' | 'updates' | 'profile' | 'privacy'>('chats');
   const [message, setMessage] = useState('');
   const queryClient = useQueryClient();
   const rtl = language === 'ar' || language === 'fa';
@@ -418,9 +419,9 @@ export default function Home() {
           <Button chromeless onPress={() => void signOut()} color={palette.muted} minWidth={48} height={48} accessibilityLabel={t('signOut')}><LogOut size={18} color={palette.muted} /></Button>
         </XStack>
         <XStack marginHorizontal="$3" marginBottom="$3" padding="$1" backgroundColor={palette.panel} borderRadius={15}>
-          {(['chats', 'updates', 'profile', 'privacy'] as const).map((tab) => (
+          {(['chats', 'private', 'updates', 'profile', 'privacy'] as const).map((tab) => (
             <Button key={tab} flex={1} minHeight={44} borderRadius={12} paddingHorizontal="$1" onPress={() => { setActiveTab(tab); pulse(); }} backgroundColor={activeTab === tab ? palette.panelLight : 'transparent'} color={activeTab === tab ? palette.mint : palette.muted}>
-              {tab === 'chats' ? t('chats') : tab === 'privacy' ? (rtl ? 'الإعدادات' : 'Settings') : tab === 'updates' ? (rtl ? 'الحالات' : 'Updates') : (rtl ? 'الملف' : 'Profile')}
+              {tab === 'chats' ? t('chats') : tab === 'private' ? (rtl ? 'خاص' : 'Private') : tab === 'privacy' ? (rtl ? 'الإعدادات' : 'Settings') : tab === 'updates' ? (rtl ? 'الحالات' : 'Updates') : (rtl ? 'الملف' : 'Profile')}
             </Button>
           ))}
         </XStack>
@@ -461,6 +462,8 @@ export default function Home() {
               <Button onPress={() => void sendMessage()} disabled={!message.trim() || busy} width={48} height={48} borderRadius={15} backgroundColor={palette.mint} color={palette.forestDeep} accessibilityLabel={t('send')} pressStyle={{ opacity: 0.82, scale: 0.96 }}><Send size={19} color={palette.forestDeep} /></Button>
             </XStack>
           </YStack>
+         ) : activeTab === 'private' ? (
+          <PrivateChatsPanel userId={user.id} profiles={profileQuery.data ?? []} rtl={rtl} />
         ) : activeTab === 'privacy' ? (
           <ScrollView flex={1}>
             <YStack padding="$4" gap="$3">

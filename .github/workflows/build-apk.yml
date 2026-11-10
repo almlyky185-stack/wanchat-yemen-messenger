@@ -1,14 +1,29 @@
-name: Build Wanchat Yemen APK
+name: Build Wanchat Yemen APKs
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+      - setup/expo-android-variants
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Build ${{ matrix.variant }} standalone APK
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: full
+            app_name: Wanchat Yemen
+            artifact_name: wanchat-yemen-apk
+          - variant: lite
+            app_name: Wanchat Lite
+            artifact_name: wanchat-lite-apk
 
     steps:
       - name: Get project
@@ -27,12 +42,14 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+      - name: Install Android platform and build tools
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: TypeScript check
         run: npx tsc --noEmit
@@ -41,16 +58,26 @@ jobs:
         run: npx expo-doctor
 
       - name: Generate native Android project
-        run: npx expo prebuild --platform android --non-interactive
+        env:
+          APP_VARIANT: ${{ matrix.variant }}
+        run: npx expo prebuild --platform android --clean --non-interactive
 
-      - name: Build installable debug APK
+      # Release builds embed the JavaScript bundle in the APK.
+      # Debug builds are Metro-dependent and must not be distributed.
+      - name: Build standalone release APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK
+      - name: Verify embedded JavaScript bundle
+        run: |
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK"
+          unzip -l "$APK" | grep -E 'assets/index.android.bundle|assets/.+\.bundle'
+
+      - name: Upload standalone APK
         uses: actions/upload-artifact@v4
         with:
-          name: wanchat-yemen-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: ${{ matrix.artifact_name }}
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
