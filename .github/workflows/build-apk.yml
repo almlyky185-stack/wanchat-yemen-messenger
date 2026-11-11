@@ -96,24 +96,22 @@ jobs:
           arch: x86_64
           profile: pixel_2
           script: |
-            bash -euo pipefail -c '
-              cd "$GITHUB_WORKSPACE"
-              echo "Workspace: $PWD"
-              APK="$GITHUB_WORKSPACE/android/app/build/outputs/apk/release/app-release.apk"
-              APP_ID="com.wanchatyemen.messenger"
-              if [ "${{ matrix.variant }}" = "lite" ]; then APP_ID="com.wanchatyemen.messenger.lite"; fi
-              ls -l "$APK"
-              test -f "$APK"
-              adb install -r "$APK"
-              adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
-              sleep 20
-              adb logcat -d -v time -t 3000 > "$GITHUB_WORKSPACE/startup-logcat.txt"
-              adb exec-out screencap -p > "$GITHUB_WORKSPACE/startup-screen.png" || true
-              adb shell pidof "$APP_ID" >/dev/null || { echo "FAIL: app process exited after launch"; cat "$GITHUB_WORKSPACE/startup-logcat.txt"; exit 1; }
-              adb shell uiautomator dump /sdcard/wanchat-window.xml
-              adb pull /sdcard/wanchat-window.xml "$GITHUB_WORKSPACE/startup-window.xml"
-              grep -Eiq "إعداد التطبيق لأول مرة|خصوصيتك وأذونات الجهاز|Wanchat Yemen|جارٍ تجهيز إعدادات التطبيق" "$GITHUB_WORKSPACE/startup-window.xml" || { echo "FAIL: expected Wanchat first screen was not found"; cat "$GITHUB_WORKSPACE/startup-window.xml"; cat "$GITHUB_WORKSPACE/startup-logcat.txt"; exit 1; }
-            '
+            cd "$GITHUB_WORKSPACE"
+            echo "Workspace: $PWD"
+            APK="$GITHUB_WORKSPACE/android/app/build/outputs/apk/release/app-release.apk"
+            APP_ID="com.wanchatyemen.messenger"
+            if [ "${{ matrix.variant }}" = "lite" ]; then APP_ID="com.wanchatyemen.messenger.lite"; fi
+            ls -l "$APK"
+            test -f "$APK"
+            adb install -r "$APK"
+            adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
+            sleep 20
+            adb logcat -d -v time -t 3000 > "$GITHUB_WORKSPACE/startup-logcat.txt"
+            adb exec-out screencap -p > "$GITHUB_WORKSPACE/startup-screen.png" || true
+            adb shell pidof "$APP_ID" >/dev/null || { echo "FAIL: app process exited after launch"; cat "$GITHUB_WORKSPACE/startup-logcat.txt"; exit 1; }
+            adb shell uiautomator dump /sdcard/wanchat-window.xml
+            adb pull /sdcard/wanchat-window.xml "$GITHUB_WORKSPACE/startup-window.xml"
+            grep -Eiq "إعداد التطبيق لأول مرة|خصوصيتك وأذونات الجهاز|Wanchat Yemen|جارٍ تجهيز إعدادات التطبيق" "$GITHUB_WORKSPACE/startup-window.xml" || { echo "FAIL: expected Wanchat first screen was not found"; cat "$GITHUB_WORKSPACE/startup-window.xml"; cat "$GITHUB_WORKSPACE/startup-logcat.txt"; exit 1; }
 
       - name: Upload startup crash log
         if: failure()
